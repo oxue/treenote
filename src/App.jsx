@@ -1,0 +1,762 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
+import { parseMarkdownTree, serializeTree } from './parser';
+import {
+  cloneTree,
+  editNodeText,
+  insertSiblingBelow,
+  insertSiblingAbove,
+  insertParent,
+  insertChild,
+  deleteNodeWithChildren,
+  deleteNodeKeepChildren,
+  swapUp,
+  swapDown,
+  toggleChecked,
+  deleteCheckedNodes,
+} from './actions';
+import './App.css';
+
+const COL_STEP = 460;
+
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+
+function Linkify({ text }) {
+  const parts = text.split(URL_RE);
+  return parts.map((part, i) =>
+    URL_RE.test(part)
+      ? <a key={i} href={part} className="node-link" onClick={(e) => e.stopPropagation()} target="_blank" rel="noopener noreferrer">{part}</a>
+      : part
+  );
+}
+
+function TreeViewList({ nodes, depth, parentPath, selectedPath, selectedIndex, onSelect }) {
+  // selectedPath is the full path, selectedIndex is the index at that path
+  // A node at parentPath=[1,2], index=3 is selected if selectedPath=[1,2] and selectedIndex=3
+  return nodes.map((node, i) => {
+    const isSelected = parentPath.length === selectedPath.length &&
+      parentPath.every((v, j) => v === selectedPath[j]) &&
+      i === selectedIndex;
+    // Is this node an ancestor of the selected node? (on the path)
+    const isAncestor = selectedPath.length > parentPath.length &&
+      parentPath.every((v, j) => v === selectedPath[j]) &&
+      selectedPath[parentPath.length] === i;
+
+    return (
+      <div key={i}>
+        <div
+          className={`tree-node ${isSelected ? 'selected' : ''} ${node.checked ? 'checked' : ''}`}
+          style={{ paddingLeft: depth * 24 + 12 }}
+          onClick={() => onSelect(parentPath, i)}
+        >
+          <span className="node-text"><Linkify text={node.text} /></span>
+          <div className="node-meta">
+            {node.checked && <span>&#10003;</span>}
+            {node.children.length > 0 && (
+              <span className="child-count">{node.children.length}</span>
+            )}
+          </div>
+        </div>
+        {node.children.length > 0 && (
+          <TreeViewList
+            nodes={node.children}
+            depth={depth + 1}
+            parentPath={[...parentPath, i]}
+            selectedPath={selectedPath}
+            selectedIndex={selectedIndex}
+            onSelect={onSelect}
+          />
+        )}
+      </div>
+    );
+  });
+}
+
+export default function App() {
+  const [tree, setTree] = useState(null);
+  const [path, setPath] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [mode, setMode] = useState('visual');
+  const [undoStack, setUndoStack] = useState([]);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [clearCheckedConfirm, setClearCheckedConfirm] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [viewMode, setViewMode] = useState('columns');
+  const editInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const parentColRef = useRef(null);
+  const currentColRef = useRef(null);
+  const childColRef = useRef(null);
+  const leftSvgRef = useRef(null);
+  const rightSvgRef = useRef(null);
+  const [leftLines, setLeftLines] = useState([]);
+  const [rightLines, setRightLines] = useState([]);
+
+  const sliderRef = useRef(null);
+  const animatingRef = useRef(false);
+  const pendingNav = useRef(null);
+
+  const getCurrentNodes = useCallback(() => {
+    if (!tree) return [];
+    let nodes = tree;
+    for (const idx of path) {
+      nodes = nodes[idx].children;
+    }
+    return nodes;
+  }, [tree, path]);
+
+  const getParentNodes = useCallback(() => {
+    if (!tree || path.length === 0) return [];
+    let nodes = tree;
+    for (let i = 0; i < path.length - 1; i++) {
+      nodes = nodes[path[i]].children;
+    }
+    return nodes;
+  }, [tree, path]);
+
+  const getBreadcrumb = useCallback(() => {
+    if (!tree) return [];
+    const crumbs = [];
+    let nodes = tree;
+    for (const idx of path) {
+      crumbs.push(nodes[idx].text);
+      nodes = nodes[idx].children;
+    }
+    return crumbs;
+  }, [tree, path]);
+
+  const currentNodes = getCurrentNodes();
+  const parentNodes = getParentNodes();
+  const parentSelectedIndex = path.length > 0 ? path[path.length - 1] : -1;
+  const breadcrumb = getBreadcrumb();
+  const selectedNode = currentNodes[selectedIndex];
+  const childNodes = selectedNode ? selectedNode.children : [];
+
+  // Apply an action result and push undo
+  const applyAction = useCallback((result) => {
+    if (!result || !tree) return;
+    setUndoStack(stack => [...stack, cloneTree(tree)]);
+    setTree(result.tree);
+    setPath(result.path);
+    setSelectedIndex(result.selectedIndex);
+  }, [tree]);
+
+  const enterEditMode = useCallback(() => {
+    if (!selectedNode) return;
+    setMode('edit');
+  }, [selectedNode]);
+
+  const exitEditMode = useCallback(() => {
+    setMode('visual');
+  }, []);
+
+  const commitEdit = useCallback((newText) => {
+    if (!tree || !selectedNode) return;
+    const trimmed = newText.trim();
+    if (trimmed === selectedNode.text) {
+      exitEditMode();
+      return;
+    }
+    const result = editNodeText(tree, path, selectedIndex, newText);
+    applyAction(result);
+    exitEditMode();
+  }, [tree, path, selectedIndex, selectedNode, applyAction, exitEditMode]);
+
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const prevTree = undoStack[undoStack.length - 1];
+    setUndoStack(stack => stack.slice(0, -1));
+    setTree(prevTree);
+  }, [undoStack]);
+
+  // Focus textarea when entering edit mode
+  useEffect(() => {
+    if (mode === 'edit' && editInputRef.current) {
+      const el = editInputRef.current;
+      el.focus();
+      el.select();
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  }, [mode]);
+
+  // Compute SVG lines
+  const updateLines = useCallback(() => {
+    if (currentColRef.current && childColRef.current && rightSvgRef.current) {
+      const selectedEl = currentColRef.current.querySelector('.node-box.selected, .node-box.editing');
+      const childEls = childColRef.current.querySelectorAll('.child-box');
+      if (selectedEl && childEls.length > 0) {
+        const svgRect = rightSvgRef.current.getBoundingClientRect();
+        const parentRect = selectedEl.getBoundingClientRect();
+        const startY = parentRect.top + parentRect.height / 2 - svgRect.top;
+        setRightLines(Array.from(childEls).map((el) => {
+          const r = el.getBoundingClientRect();
+          return { startY, endY: r.top + r.height / 2 - svgRect.top };
+        }));
+      } else {
+        setRightLines([]);
+      }
+    } else {
+      setRightLines([]);
+    }
+
+    if (parentColRef.current && currentColRef.current && leftSvgRef.current) {
+      const parentEl = parentColRef.current.querySelector('.parent-box.highlighted');
+      const currentEls = currentColRef.current.querySelectorAll('.node-box');
+      if (parentEl && currentEls.length > 0) {
+        const svgRect = leftSvgRef.current.getBoundingClientRect();
+        const parentRect = parentEl.getBoundingClientRect();
+        const startY = parentRect.top + parentRect.height / 2 - svgRect.top;
+        setLeftLines(Array.from(currentEls).map((el) => {
+          const r = el.getBoundingClientRect();
+          return { startY, endY: r.top + r.height / 2 - svgRect.top };
+        }));
+      } else {
+        setLeftLines([]);
+      }
+    } else {
+      setLeftLines([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateLines();
+  }, [selectedIndex, path, tree, childNodes.length, currentNodes.length, parentNodes.length, updateLines]);
+
+  // Slide animation for depth changes
+  const slideNavigate = useCallback((direction, newPath, newSelectedIndex) => {
+    if (animatingRef.current) return;
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    animatingRef.current = true;
+    pendingNav.current = { path: newPath, selectedIndex: newSelectedIndex };
+
+    const offset = direction === 'right' ? -COL_STEP : COL_STEP;
+    slider.style.transition = 'transform 0.28s cubic-bezier(0.25, 0.1, 0.25, 1)';
+    slider.style.transform = `translateX(${offset}px)`;
+
+    const onEnd = () => {
+      slider.removeEventListener('transitionend', onEnd);
+      slider.style.transition = 'none';
+      slider.style.transform = 'translateX(0)';
+      if (pendingNav.current) {
+        flushSync(() => {
+          setPath(pendingNav.current.path);
+          setSelectedIndex(pendingNav.current.selectedIndex);
+          pendingNav.current = null;
+        });
+      }
+      requestAnimationFrame(() => {
+        slider.style.transition = '';
+        animatingRef.current = false;
+      });
+    };
+    slider.addEventListener('transitionend', onEnd, { once: true });
+
+    setTimeout(() => {
+      if (animatingRef.current) onEnd();
+    }, 350);
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e) {
+      // Cmd+S saves in any mode
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (tree && window.treenote?.saveDefaultFile) {
+          window.treenote.saveDefaultFile(serializeTree(tree)).then((ok) => {
+            setToast(ok ? 'Saved' : 'Save failed');
+            setTimeout(() => setToast(null), 1000);
+          });
+        }
+        return;
+      }
+
+      if (mode === 'edit') return;
+
+      // Delete confirmation modal keys
+      if (deleteConfirm) {
+        e.preventDefault();
+        if (e.key === '1') {
+          applyAction(deleteNodeWithChildren(tree, path, selectedIndex));
+          setDeleteConfirm(false);
+        } else if (e.key === '2') {
+          applyAction(deleteNodeKeepChildren(tree, path, selectedIndex));
+          setDeleteConfirm(false);
+        } else if (e.key === '3' || e.key === 'Escape') {
+          setDeleteConfirm(false);
+        }
+        return;
+      }
+
+      // Clear checked confirmation modal keys
+      if (clearCheckedConfirm) {
+        e.preventDefault();
+        if (e.key === '1' || e.key === 'Enter') {
+          const result = deleteCheckedNodes(tree, path, selectedIndex);
+          if (result) applyAction(result);
+          setClearCheckedConfirm(false);
+        } else if (e.key === '2' || e.key === 'Escape') {
+          setClearCheckedConfirm(false);
+        }
+        return;
+      }
+
+      if (!tree) return;
+      const nodes = getCurrentNodes();
+      if (nodes.length === 0) return;
+      if (animatingRef.current && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) return;
+
+      const isMeta = e.metaKey || e.ctrlKey;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          if (isMeta) {
+            applyAction(insertSiblingAbove(tree, path, selectedIndex));
+          } else if (e.shiftKey) {
+            const result = swapUp(tree, path, selectedIndex);
+            if (result) applyAction(result);
+          } else {
+            setSelectedIndex(i => i <= 0 ? nodes.length - 1 : i - 1);
+          }
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          if (isMeta) {
+            applyAction(insertSiblingBelow(tree, path, selectedIndex));
+          } else if (e.shiftKey) {
+            const result = swapDown(tree, path, selectedIndex);
+            if (result) applyAction(result);
+          } else {
+            setSelectedIndex(i => i >= nodes.length - 1 ? 0 : i + 1);
+          }
+          break;
+        case 'ArrowRight': {
+          e.preventDefault();
+          if (isMeta) {
+            const result = insertChild(tree, path, selectedIndex);
+            if (result) applyAction(result);
+          } else {
+            const selected = nodes[selectedIndex];
+            if (selected && selected.children.length > 0) {
+              slideNavigate('right', [...path, selectedIndex], 0);
+            }
+          }
+          break;
+        }
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (isMeta) {
+            const result = insertParent(tree, path, selectedIndex);
+            if (result) applyAction(result);
+          } else if (path.length > 0) {
+            slideNavigate('left', path.slice(0, -1), path[path.length - 1]);
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          enterEditMode();
+          break;
+        case 'z':
+          e.preventDefault();
+          undo();
+          break;
+        case 'c':
+          e.preventDefault();
+          if (selectedNode) {
+            applyAction(toggleChecked(tree, path, selectedIndex));
+          }
+          break;
+        case 't':
+          e.preventDefault();
+          setViewMode(v => v === 'columns' ? 'tree' : 'columns');
+          break;
+        case 'x':
+          e.preventDefault();
+          if (isMeta) {
+            const hasChecked = nodes.some(n => n.checked);
+            if (hasChecked) setClearCheckedConfirm(true);
+          } else if (selectedNode) {
+            if (selectedNode.children.length > 0) {
+              setDeleteConfirm(true);
+            } else {
+              applyAction(deleteNodeWithChildren(tree, path, selectedIndex));
+            }
+          }
+          break;
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    const el = currentColRef.current?.querySelector('.node-box.selected, .node-box.editing');
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex, path]);
+
+  // Load default file on startup (Electron only)
+  useEffect(() => {
+    if (window.treenote?.getDefaultFile) {
+      window.treenote.getDefaultFile().then((content) => {
+        if (content) {
+          const parsed = parseMarkdownTree(content);
+          setTree(parsed);
+          setPath([]);
+          setSelectedIndex(0);
+        }
+      });
+    }
+  }, []);
+
+  function handleFileLoad(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const parsed = parseMarkdownTree(ev.target.result);
+      setTree(parsed);
+      setPath([]);
+      setSelectedIndex(0);
+      setUndoStack([]);
+      setMode('visual');
+    };
+    reader.readAsText(file);
+  }
+
+  function handleNodeClick(i) {
+    if (mode === 'edit' && i !== selectedIndex) {
+      exitEditMode();
+      setSelectedIndex(i);
+    } else if (i === selectedIndex) {
+      enterEditMode();
+    } else {
+      setSelectedIndex(i);
+    }
+  }
+
+  return (
+    <div className="app" onClick={(e) => {
+      if (mode === 'edit' && !e.target.closest('.node-box')) {
+        if (editInputRef.current) {
+          commitEdit(editInputRef.current.value);
+        } else {
+          exitEditMode();
+        }
+      }
+    }}>
+      <div className="toolbar">
+        <button className="load-btn" onClick={() => fileInputRef.current.click()}>
+          Load File
+        </button>
+        {tree && (
+          <button className="load-btn" onClick={() => {
+            if (window.treenote?.saveDefaultFile) {
+              window.treenote.saveDefaultFile(serializeTree(tree)).then((ok) => {
+                setToast(ok ? 'Saved' : 'Save failed');
+                setTimeout(() => setToast(null), 1000);
+              });
+            }
+          }}>
+            Save
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".md,.txt"
+          style={{ display: 'none' }}
+          onChange={handleFileLoad}
+        />
+        <span className={`mode-indicator ${mode}`}>
+          {mode}
+        </span>
+        {breadcrumb.length > 0 && (
+          <div className="breadcrumb">
+            {breadcrumb.map((crumb, i) => (
+              <span key={i}>
+                {i > 0 && <span className="breadcrumb-separator"> &gt; </span>}
+                <span className={`breadcrumb-item ${i === breadcrumb.length - 1 ? 'current' : ''}`}>
+                  {crumb}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {!tree ? (
+        <div className="empty-state">Load a markdown file to get started</div>
+      ) : viewMode === 'tree' ? (
+        <div className="tree-view">
+          <TreeViewList
+            nodes={tree}
+            depth={0}
+            parentPath={[]}
+            selectedPath={path}
+            selectedIndex={selectedIndex}
+            onSelect={(newPath, newIndex) => {
+              setPath(newPath);
+              setSelectedIndex(newIndex);
+            }}
+          />
+        </div>
+      ) : currentNodes.length === 0 ? (
+        <div className="empty-state">No children (press Left to go back)</div>
+      ) : (
+        <div className="columns-viewport">
+          <div className="columns" ref={sliderRef}>
+            {parentNodes.length > 0 ? (
+              <>
+                <div className="parent-list" ref={parentColRef}>
+                  {parentNodes.map((node, i) => (
+                    <div
+                      key={i}
+                      className={`parent-box ${i === parentSelectedIndex ? 'highlighted' : ''} ${node.checked ? 'checked' : ''}`}
+                      onClick={() => {
+                        if (mode === 'edit') exitEditMode();
+                        slideNavigate('left', path.slice(0, -1), i);
+                      }}
+                    >
+                      <span className="node-text"><Linkify text={node.text} /></span>
+                      <div className="node-meta">
+                        {node.checked && <span>&#10003;</span>}
+                        {node.children.length > 0 && (
+                          <span className="child-count">{node.children.length}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <svg className="lines-svg" ref={leftSvgRef}>
+                  {leftLines.map((l, i) => (
+                    <path
+                      key={i}
+                      d={`M 0 ${l.startY} C 30 ${l.startY}, 30 ${l.endY}, 60 ${l.endY}`}
+                      stroke="#e94560"
+                      strokeWidth="1.5"
+                      fill="none"
+                      opacity="0.35"
+                    />
+                  ))}
+                </svg>
+              </>
+            ) : (
+              <div className="column-spacer" />
+            )}
+
+            <div className="node-list" ref={currentColRef}>
+              {currentNodes.map((node, i) => {
+                const isSelected = i === selectedIndex;
+                const isEditing = isSelected && mode === 'edit';
+
+                return (
+                  <div
+                    key={i}
+                    className={`node-box ${isSelected && !isEditing ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${node.checked ? 'checked' : ''}`}
+                    onClick={() => handleNodeClick(i)}
+                    onDoubleClick={() => {
+                      if (mode === 'edit') return;
+                      if (node.children.length > 0) {
+                        slideNavigate('right', [...path, i], 0);
+                      }
+                    }}
+                  >
+                    {isEditing && <span className="edit-icon">&#9998;</span>}
+                    {isEditing ? (
+                      <textarea
+                        ref={editInputRef}
+                        className="node-text-input"
+                        defaultValue={node.text}
+                        rows={1}
+                        onInput={(e) => {
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            commitEdit(e.target.value);
+                          }
+                          e.stopPropagation();
+                        }}
+                        onBlur={(e) => {
+                          if (mode === 'edit') {
+                            commitEdit(e.target.value);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="node-text"><Linkify text={node.text} /></span>
+                    )}
+                    <div className="node-meta">
+                      {node.checked && <span>&#10003;</span>}
+                      {node.children.length > 0 && (
+                        <span className="child-count">{node.children.length}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {childNodes.length > 0 && (
+              <>
+                <svg className="lines-svg" ref={rightSvgRef}>
+                  {rightLines.map((l, i) => (
+                    <path
+                      key={i}
+                      d={`M 0 ${l.startY} C 30 ${l.startY}, 30 ${l.endY}, 60 ${l.endY}`}
+                      stroke="#e94560"
+                      strokeWidth="1.5"
+                      fill="none"
+                      opacity="0.5"
+                    />
+                  ))}
+                </svg>
+                <div className="child-list" ref={childColRef}>
+                  {childNodes.map((child, i) => (
+                    <div
+                      key={i}
+                      className={`child-box ${child.checked ? 'checked' : ''}`}
+                      onClick={() => {
+                        if (mode === 'edit') exitEditMode();
+                        slideNavigate('right', [...path, selectedIndex], i);
+                      }}
+                    >
+                      <span className="node-text"><Linkify text={child.text} /></span>
+                      <div className="node-meta">
+                        {child.checked && <span>&#10003;</span>}
+                        {child.children.length > 0 && (
+                          <span className="child-count">{child.children.length}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {toast && <div className="toast">{toast}</div>}
+      {deleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-title">Delete node with children?</div>
+            <div className="modal-option" onClick={() => { applyAction(deleteNodeWithChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}>
+              <kbd>1</kbd> <span>Delete with children</span>
+            </div>
+            <div className="modal-option" onClick={() => { applyAction(deleteNodeKeepChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}>
+              <kbd>2</kbd> <span>Keep children, delete node</span>
+            </div>
+            <div className="modal-option" onClick={() => setDeleteConfirm(false)}>
+              <kbd>3</kbd> <span>Cancel</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {clearCheckedConfirm && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-title">Delete all checked items in this column?</div>
+            <div className="modal-option" onClick={() => { const r = deleteCheckedNodes(tree, path, selectedIndex); if (r) applyAction(r); setClearCheckedConfirm(false); }}>
+              <kbd>1</kbd> <span>Delete checked</span>
+            </div>
+            <div className="modal-option" onClick={() => setClearCheckedConfirm(false)}>
+              <kbd>2</kbd> <span>Cancel</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="hotkey-legend">
+        {mode === 'visual' ? (
+          <>
+            <div className="legend-row">
+              <span className="legend-keys arrow-keys">
+                <kbd>&#9650;</kbd>
+                <kbd>&#9668;</kbd>
+                <kbd>&#9660;</kbd>
+                <kbd>&#9658;</kbd>
+              </span>
+              <span className="legend-desc">Navigate</span>
+            </div>
+            <div className="legend-row">
+              <span className="legend-keys arrow-keys">
+                <kbd>&#8679;</kbd>
+                <span className="legend-plus">+</span>
+                <kbd>&#9650;</kbd>
+                <kbd>&#9660;</kbd>
+              </span>
+              <span className="legend-desc">Swap node</span>
+            </div>
+            <div className="legend-row">
+              <span className="legend-keys arrow-keys">
+                <kbd>&#8984;</kbd>
+                <span className="legend-plus">+</span>
+                <kbd>&#9650;</kbd>
+                <kbd>&#9668;</kbd>
+                <kbd>&#9660;</kbd>
+                <kbd>&#9658;</kbd>
+              </span>
+              <span className="legend-desc">Insert node</span>
+            </div>
+            <div className="legend-row">
+              <kbd>Enter</kbd>
+              <span className="legend-desc">Edit selected</span>
+            </div>
+            <div className="legend-row">
+              <kbd>c</kbd>
+              <span className="legend-desc">Check/uncheck</span>
+            </div>
+            <div className="legend-row">
+              <kbd>x</kbd>
+              <span className="legend-desc">Delete node</span>
+            </div>
+            <div className="legend-row">
+              <kbd>z</kbd>
+              <span className="legend-desc">Undo</span>
+            </div>
+            <div className="legend-row">
+              <span className="legend-keys arrow-keys">
+                <kbd>&#8984;</kbd>
+                <span className="legend-plus">+</span>
+                <kbd>X</kbd>
+              </span>
+              <span className="legend-desc">Clear checked</span>
+            </div>
+            <div className="legend-row">
+              <kbd>t</kbd>
+              <span className="legend-desc">Tree view</span>
+            </div>
+            <div className="legend-row">
+              <span className="legend-keys arrow-keys">
+                <kbd>&#8984;</kbd>
+                <span className="legend-plus">+</span>
+                <kbd>S</kbd>
+              </span>
+              <span className="legend-desc">Save</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="legend-row">
+              <kbd>Esc</kbd>
+              <span className="legend-desc">Confirm &amp; exit</span>
+            </div>
+            <div className="legend-row">
+              <kbd>Enter</kbd>
+              <span className="legend-desc">New line</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
