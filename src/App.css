@@ -104,6 +104,88 @@ body {
   color: #555;
 }
 
+/* Queue bar */
+.queue-bar {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.queue-label {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.queue-items {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.queue-box {
+  min-width: 100px;
+  max-width: 200px;
+  padding: 8px 12px;
+  background: #16213e;
+  border: 1.5px solid #0f3460;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.queue-box:hover {
+  border-color: #e94560;
+}
+
+.queue-box.queue-selected {
+  border-color: #e94560;
+  box-shadow: 0 0 10px rgba(233, 69, 96, 0.25);
+}
+
+.queue-box.queue-editing {
+  box-shadow: 0 0 14px rgba(233, 69, 96, 0.35);
+}
+
+.queue-box.queue-temp {
+  border-style: dashed;
+}
+
+.queue-box.checked {
+  opacity: 0.45;
+}
+
+.queue-box.checked .queue-text {
+  text-decoration: line-through;
+}
+
+.queue-text {
+  font-size: 13px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.queue-text-input {
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e0e0e0;
+  width: 100%;
+  font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
 /* Viewport clips the sliding columns */
 .columns-viewport {
   flex: 1;
@@ -415,40 +497,6 @@ kbd {
   border-bottom: 2px solid #2a2a3a;
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-/* Tree view */
-.tree-view {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 8px;
-}
-
-.tree-node {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.tree-node:hover {
-  background: rgba(233, 69, 96, 0.08);
-}
-
-.tree-node.selected {
-  background: #1a1a3e;
-  box-shadow: inset 3px 0 0 #e94560;
-}
-
-.tree-node.checked {
-  opacity: 0.45;
-}
-
-.tree-node.checked .node-text {
-  text-decoration: line-through;
 }
 
 /* Toast notification */

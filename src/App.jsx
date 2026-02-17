@@ -14,6 +14,7 @@ import {
   swapDown,
   toggleChecked,
   deleteCheckedNodes,
+  mergeIntoParent,
 } from './actions';
 import './App.css';
 
@@ -30,48 +31,6 @@ function Linkify({ text }) {
   );
 }
 
-function TreeViewList({ nodes, depth, parentPath, selectedPath, selectedIndex, onSelect }) {
-  // selectedPath is the full path, selectedIndex is the index at that path
-  // A node at parentPath=[1,2], index=3 is selected if selectedPath=[1,2] and selectedIndex=3
-  return nodes.map((node, i) => {
-    const isSelected = parentPath.length === selectedPath.length &&
-      parentPath.every((v, j) => v === selectedPath[j]) &&
-      i === selectedIndex;
-    // Is this node an ancestor of the selected node? (on the path)
-    const isAncestor = selectedPath.length > parentPath.length &&
-      parentPath.every((v, j) => v === selectedPath[j]) &&
-      selectedPath[parentPath.length] === i;
-
-    return (
-      <div key={i}>
-        <div
-          className={`tree-node ${isSelected ? 'selected' : ''} ${node.checked ? 'checked' : ''}`}
-          style={{ paddingLeft: depth * 24 + 12 }}
-          onClick={() => onSelect(parentPath, i)}
-        >
-          <span className="node-text"><Linkify text={node.text} /></span>
-          <div className="node-meta">
-            {node.checked && <span>&#10003;</span>}
-            {node.children.length > 0 && (
-              <span className="child-count">{node.children.length}</span>
-            )}
-          </div>
-        </div>
-        {node.children.length > 0 && (
-          <TreeViewList
-            nodes={node.children}
-            depth={depth + 1}
-            parentPath={[...parentPath, i]}
-            selectedPath={selectedPath}
-            selectedIndex={selectedIndex}
-            onSelect={onSelect}
-          />
-        )}
-      </div>
-    );
-  });
-}
-
 export default function App() {
   const [tree, setTree] = useState(null);
   const [path, setPath] = useState([]);
@@ -81,8 +40,11 @@ export default function App() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [clearCheckedConfirm, setClearCheckedConfirm] = useState(false);
   const [toast, setToast] = useState(null);
-  const [viewMode, setViewMode] = useState('columns');
+  const [queue, setQueue] = useState([]);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [focus, setFocus] = useState('graph');
   const editInputRef = useRef(null);
+  const queueEditRef = useRef(null);
   const fileInputRef = useRef(null);
   const parentColRef = useRef(null);
   const currentColRef = useRef(null);
@@ -171,14 +133,19 @@ export default function App() {
 
   // Focus textarea when entering edit mode
   useEffect(() => {
-    if (mode === 'edit' && editInputRef.current) {
+    if (mode === 'edit' && focus === 'graph' && editInputRef.current) {
       const el = editInputRef.current;
       el.focus();
       el.select();
       el.style.height = 'auto';
       el.style.height = el.scrollHeight + 'px';
     }
-  }, [mode]);
+    if (mode === 'edit' && focus === 'queue' && queueEditRef.current) {
+      const el = queueEditRef.current;
+      el.focus();
+      el.select();
+    }
+  }, [mode, focus]);
 
   // Compute SVG lines
   const updateLines = useCallback(() => {
@@ -306,11 +273,100 @@ export default function App() {
 
       if (!tree) return;
       const nodes = getCurrentNodes();
-      if (nodes.length === 0) return;
+      if (nodes.length === 0 && focus === 'graph') return;
       if (animatingRef.current && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) return;
 
       const isMeta = e.metaKey || e.ctrlKey;
 
+      // Queue focus key bindings
+      if (focus === 'queue') {
+        switch (e.key) {
+          case 'ArrowLeft':
+            e.preventDefault();
+            if (isMeta) {
+              // Insert temp box to the left
+              setQueue(q => {
+                const newQ = [...q];
+                newQ.splice(queueIndex, 0, { type: 'temp', text: '', checked: false });
+                return newQ;
+              });
+            } else if (e.shiftKey) {
+              // Reorder left
+              if (queueIndex > 0) {
+                setQueue(q => {
+                  const newQ = [...q];
+                  [newQ[queueIndex - 1], newQ[queueIndex]] = [newQ[queueIndex], newQ[queueIndex - 1]];
+                  return newQ;
+                });
+                setQueueIndex(i => i - 1);
+              }
+            } else {
+              setQueueIndex(i => Math.max(0, i - 1));
+            }
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            if (isMeta) {
+              // Insert temp box to the right
+              setQueue(q => {
+                const newQ = [...q];
+                newQ.splice(queueIndex + 1, 0, { type: 'temp', text: '', checked: false });
+                return newQ;
+              });
+              setQueueIndex(i => i + 1);
+            } else if (e.shiftKey) {
+              // Reorder right
+              if (queueIndex < queue.length - 1) {
+                setQueue(q => {
+                  const newQ = [...q];
+                  [newQ[queueIndex], newQ[queueIndex + 1]] = [newQ[queueIndex + 1], newQ[queueIndex]];
+                  return newQ;
+                });
+                setQueueIndex(i => i + 1);
+              }
+            } else {
+              setQueueIndex(i => Math.min(queue.length - 1, i + 1));
+            }
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            setFocus('graph');
+            setSelectedIndex(0);
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            break;
+          case 'x':
+            e.preventDefault();
+            if (queue.length > 0) {
+              setQueue(q => q.filter((_, i) => i !== queueIndex));
+              setQueueIndex(i => Math.min(i, queue.length - 2));
+              if (queue.length <= 1) {
+                setFocus('graph');
+                setQueueIndex(0);
+              }
+            }
+            break;
+          case 'Enter':
+            e.preventDefault();
+            if (queue[queueIndex] && queue[queueIndex].type === 'temp') {
+              setMode('edit');
+            }
+            break;
+          case 'q':
+            e.preventDefault();
+            if (queue[queueIndex] && queue[queueIndex].type === 'ref') {
+              const item = queue[queueIndex];
+              setPath(item.path);
+              setSelectedIndex(item.index);
+              setFocus('graph');
+            }
+            break;
+        }
+        return;
+      }
+
+      // Graph focus key bindings
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
@@ -320,7 +376,15 @@ export default function App() {
             const result = swapUp(tree, path, selectedIndex);
             if (result) applyAction(result);
           } else {
-            setSelectedIndex(i => i <= 0 ? nodes.length - 1 : i - 1);
+            if (selectedIndex <= 0) {
+              // At top — enter queue if it has items
+              if (queue.length > 0) {
+                setFocus('queue');
+                setQueueIndex(queue.length - 1);
+              }
+            } else {
+              setSelectedIndex(i => i - 1);
+            }
           }
           break;
         case 'ArrowDown':
@@ -331,7 +395,8 @@ export default function App() {
             const result = swapDown(tree, path, selectedIndex);
             if (result) applyAction(result);
           } else {
-            setSelectedIndex(i => i >= nodes.length - 1 ? 0 : i + 1);
+            // No wrap-around — stop at bottom
+            setSelectedIndex(i => i >= nodes.length - 1 ? i : i + 1);
           }
           break;
         case 'ArrowRight': {
@@ -352,6 +417,9 @@ export default function App() {
           if (isMeta) {
             const result = insertParent(tree, path, selectedIndex);
             if (result) applyAction(result);
+          } else if (e.altKey) {
+            const result = mergeIntoParent(tree, path, selectedIndex);
+            if (result) applyAction(result);
           } else if (path.length > 0) {
             slideNavigate('left', path.slice(0, -1), path[path.length - 1]);
           }
@@ -370,10 +438,6 @@ export default function App() {
             applyAction(toggleChecked(tree, path, selectedIndex));
           }
           break;
-        case 't':
-          e.preventDefault();
-          setViewMode(v => v === 'columns' ? 'tree' : 'columns');
-          break;
         case 'x':
           e.preventDefault();
           if (isMeta) {
@@ -387,12 +451,24 @@ export default function App() {
             }
           }
           break;
+        case 'q':
+          e.preventDefault();
+          if (selectedNode) {
+            setQueue(q => [...q, {
+              type: 'ref',
+              path: [...path],
+              index: selectedIndex,
+              text: selectedNode.text,
+              checked: selectedNode.checked || false,
+            }]);
+          }
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -430,6 +506,10 @@ export default function App() {
   }
 
   function handleNodeClick(i) {
+    if (focus === 'queue') {
+      setFocus('graph');
+      setMode('visual');
+    }
     if (mode === 'edit' && i !== selectedIndex) {
       exitEditMode();
       setSelectedIndex(i);
@@ -442,7 +522,13 @@ export default function App() {
 
   return (
     <div className="app" onClick={(e) => {
-      if (mode === 'edit' && !e.target.closest('.node-box')) {
+      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box')) {
+        if (queueEditRef.current) {
+          const newText = queueEditRef.current.value.trim();
+          setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, text: newText } : it));
+        }
+        setMode('visual');
+      } else if (mode === 'edit' && focus === 'graph' && !e.target.closest('.node-box')) {
         if (editInputRef.current) {
           commitEdit(editInputRef.current.value);
         } else {
@@ -490,22 +576,63 @@ export default function App() {
         )}
       </div>
 
+      {queue.length > 0 && (
+        <div className="queue-bar">
+          <div className="queue-label">Queue</div>
+          <div className="queue-items">
+            {queue.map((item, i) => {
+              const isSelected = focus === 'queue' && i === queueIndex;
+              const isEditing = isSelected && mode === 'edit' && item.type === 'temp';
+              return (
+                <div
+                  key={i}
+                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${item.checked ? 'checked' : ''}`}
+                  onClick={() => {
+                    setFocus('queue');
+                    setQueueIndex(i);
+                  }}
+                >
+                  {isEditing ? (
+                    <textarea
+                      ref={queueEditRef}
+                      className="queue-text-input"
+                      defaultValue={item.text}
+                      rows={1}
+                      autoFocus
+                      onInput={(e) => {
+                        e.target.style.height = 'auto';
+                        e.target.style.height = e.target.scrollHeight + 'px';
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
+                          const newText = e.target.value.trim();
+                          setQueue(q => q.map((it, idx) => idx === i ? { ...it, text: newText } : it));
+                          setMode('visual');
+                        }
+                        e.stopPropagation();
+                      }}
+                      onBlur={(e) => {
+                        const newText = e.target.value.trim();
+                        setQueue(q => q.map((it, idx) => idx === i ? { ...it, text: newText } : it));
+                        setMode('visual');
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span className="queue-text">
+                      {item.text || (item.type === 'temp' ? '...' : '')}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {!tree ? (
         <div className="empty-state">Load a markdown file to get started</div>
-      ) : viewMode === 'tree' ? (
-        <div className="tree-view">
-          <TreeViewList
-            nodes={tree}
-            depth={0}
-            parentPath={[]}
-            selectedPath={path}
-            selectedIndex={selectedIndex}
-            onSelect={(newPath, newIndex) => {
-              setPath(newPath);
-              setSelectedIndex(newIndex);
-            }}
-          />
-        </div>
       ) : currentNodes.length === 0 ? (
         <div className="empty-state">No children (press Left to go back)</div>
       ) : (
@@ -724,16 +851,16 @@ export default function App() {
               <span className="legend-desc">Undo</span>
             </div>
             <div className="legend-row">
+              <kbd>q</kbd>
+              <span className="legend-desc">Add to queue</span>
+            </div>
+            <div className="legend-row">
               <span className="legend-keys arrow-keys">
                 <kbd>&#8984;</kbd>
                 <span className="legend-plus">+</span>
                 <kbd>X</kbd>
               </span>
               <span className="legend-desc">Clear checked</span>
-            </div>
-            <div className="legend-row">
-              <kbd>t</kbd>
-              <span className="legend-desc">Tree view</span>
             </div>
             <div className="legend-row">
               <span className="legend-keys arrow-keys">

@@ -134,10 +134,17 @@ export function swapDown(tree, path, selectedIndex) {
 }
 
 // Toggle checked state of the selected node
+// When checking, move the node to the end of its siblings
 export function toggleChecked(tree, path, selectedIndex) {
   const newTree = cloneTree(tree);
-  const node = getNodeAt(newTree, path, selectedIndex);
+  const siblings = getNodesAt(newTree, path);
+  const node = siblings[selectedIndex];
   node.checked = !node.checked;
+  if (node.checked) {
+    siblings.splice(selectedIndex, 1);
+    siblings.push(node);
+    return { tree: newTree, path, selectedIndex: Math.min(selectedIndex, siblings.length - 1) };
+  }
   return { tree: newTree, path, selectedIndex };
 }
 
@@ -153,6 +160,27 @@ export function deleteCheckedNodes(tree, path, selectedIndex) {
   const newIndex = Math.min(selectedIndex, siblings.length - 1);
   if (siblings.length === 0 && path.length > 0) {
     return { tree: newTree, path: path.slice(0, -1), selectedIndex: path[path.length - 1] };
+  }
+  return { tree: newTree, path, selectedIndex: Math.max(0, newIndex) };
+}
+
+// Merge selected node's text into its parent (appending with newline)
+// The node is removed; its children are promoted to siblings in its place
+export function mergeIntoParent(tree, path, selectedIndex) {
+  if (path.length === 0) return null; // root nodes have no parent to merge into
+  const newTree = cloneTree(tree);
+  const parentPath = path.slice(0, -1);
+  const parentIdx = path[path.length - 1];
+  const parent = getNodeAt(newTree, parentPath, parentIdx);
+  const siblings = parent.children;
+  const node = siblings[selectedIndex];
+  // Append node text to parent
+  parent.text = parent.text + '\n' + node.text;
+  // Replace node with its children
+  siblings.splice(selectedIndex, 1, ...node.children);
+  const newIndex = Math.min(selectedIndex, siblings.length - 1);
+  if (siblings.length === 0) {
+    return { tree: newTree, path: parentPath, selectedIndex: parentIdx };
   }
   return { tree: newTree, path, selectedIndex: Math.max(0, newIndex) };
 }
