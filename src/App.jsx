@@ -18,31 +18,11 @@ import {
   moveToParentLevel,
   moveToSibling,
 } from './actions';
+import ChildCount from './components/ChildCount';
+import Linkify from './components/Linkify';
 import './App.css';
 
 const COL_STEP = 460;
-
-const URL_RE = /(https?:\/\/[^\s]+)/g;
-
-function ChildCount({ children }) {
-  if (children.length === 0) return null;
-  const unchecked = children.filter(c => !c.checked).length;
-  const checked = children.filter(c => c.checked).length;
-  return (
-    <span className="child-count">
-      {unchecked}{checked > 0 && <>/<s>{checked}</s></>}
-    </span>
-  );
-}
-
-function Linkify({ text }) {
-  const parts = text.split(URL_RE);
-  return parts.map((part, i) =>
-    URL_RE.test(part)
-      ? <a key={i} href={part} className="node-link" onClick={(e) => e.stopPropagation()} target="_blank" rel="noopener noreferrer">{part}</a>
-      : part
-  );
-}
 
 export default function App() {
   const [tree, setTree] = useState(null);
