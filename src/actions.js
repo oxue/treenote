@@ -185,4 +185,45 @@ export function mergeIntoParent(tree, path, selectedIndex) {
   return { tree: newTree, path, selectedIndex: Math.max(0, newIndex) };
 }
 
+// Move node out to parent level (outdent / Alt+Left)
+// Removes node from current siblings and inserts it after the parent in the grandparent's children
+export function moveToParentLevel(tree, path, selectedIndex) {
+  if (path.length === 0) return null; // already at root
+  const newTree = cloneTree(tree);
+  const parentPath = path.slice(0, -1);
+  const parentIdx = path[path.length - 1];
+  const parentSiblings = getNodesAt(newTree, parentPath);
+  const parent = parentSiblings[parentIdx];
+  const siblings = parent.children;
+  const node = siblings.splice(selectedIndex, 1)[0];
+  // Insert after parent in grandparent's children
+  parentSiblings.splice(parentIdx + 1, 0, node);
+  return { tree: newTree, path: parentPath, selectedIndex: parentIdx + 1 };
+}
+
+// Move node as child of the sibling above (Alt+Up) or below (Alt+Down)
+// direction: -1 = above, +1 = below
+export function moveToSibling(tree, path, selectedIndex, direction) {
+  const newTree = cloneTree(tree);
+  const siblings = getNodesAt(newTree, path);
+  const targetIdx = selectedIndex + direction;
+  if (targetIdx < 0 || targetIdx >= siblings.length) return null;
+  const node = siblings.splice(selectedIndex, 1)[0];
+  // Adjust target index after removal
+  const adjustedTarget = direction === -1 ? targetIdx : targetIdx - 1;
+  const target = siblings[adjustedTarget];
+  if (direction === -1) {
+    // Append as last child of sibling above
+    target.children.push(node);
+  } else {
+    // Prepend as first child of sibling below
+    target.children.unshift(node);
+  }
+  return {
+    tree: newTree,
+    path: [...path, adjustedTarget],
+    selectedIndex: direction === -1 ? target.children.length - 1 : 0,
+  };
+}
+
 export { cloneTree, getNodeAt, getNodesAt };

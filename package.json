@@ -16,6 +16,16 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
+  "build": {
+    "appId": "com.treenote.app",
+    "productName": "Treenote",
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "electron/**/*"],
+    "mac": {
+      "icon": "assets/icon.icns",
+      "target": "dmg"
+    }
+  },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.4",
     "concurrently": "^9.2.1",

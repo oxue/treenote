@@ -15,12 +15,25 @@ import {
   toggleChecked,
   deleteCheckedNodes,
   mergeIntoParent,
+  moveToParentLevel,
+  moveToSibling,
 } from './actions';
 import './App.css';
 
 const COL_STEP = 460;
 
 const URL_RE = /(https?:\/\/[^\s]+)/g;
+
+function ChildCount({ children }) {
+  if (children.length === 0) return null;
+  const unchecked = children.filter(c => !c.checked).length;
+  const checked = children.filter(c => c.checked).length;
+  return (
+    <span className="child-count">
+      {unchecked}{checked > 0 && <>/<s>{checked}</s></>}
+    </span>
+  );
+}
 
 function Linkify({ text }) {
   const parts = text.split(URL_RE);
@@ -39,9 +52,14 @@ export default function App() {
   const [undoStack, setUndoStack] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [clearCheckedConfirm, setClearCheckedConfirm] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsPath, setSettingsPath] = useState('');
+  const [settingsPhysics, setSettingsPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
   const [toast, setToast] = useState(null);
   const [queue, setQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(0);
+  const [ejecting, setEjecting] = useState([]);
+  const [physics, setPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
   const [focus, setFocus] = useState('graph');
   const editInputRef = useRef(null);
   const queueEditRef = useRef(null);
@@ -243,6 +261,15 @@ export default function App() {
 
       if (mode === 'edit') return;
 
+      // Settings modal — Escape closes it
+      if (settingsOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setSettingsOpen(false);
+        }
+        return;
+      }
+
       // Delete confirmation modal keys
       if (deleteConfirm) {
         e.preventDefault();
@@ -336,6 +363,16 @@ export default function App() {
           case 'ArrowUp':
             e.preventDefault();
             break;
+          case 'c':
+            e.preventDefault();
+            if (queue[queueIndex]) {
+              if (queue[queueIndex].checked) {
+                setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, checked: false } : it));
+              } else {
+                ejectQueueItem(queueIndex);
+              }
+            }
+            break;
           case 'x':
             e.preventDefault();
             if (queue.length > 0) {
@@ -372,6 +409,9 @@ export default function App() {
           e.preventDefault();
           if (isMeta) {
             applyAction(insertSiblingAbove(tree, path, selectedIndex));
+          } else if (e.altKey) {
+            const result = moveToSibling(tree, path, selectedIndex, -1);
+            if (result) applyAction(result);
           } else if (e.shiftKey) {
             const result = swapUp(tree, path, selectedIndex);
             if (result) applyAction(result);
@@ -391,6 +431,9 @@ export default function App() {
           e.preventDefault();
           if (isMeta) {
             applyAction(insertSiblingBelow(tree, path, selectedIndex));
+          } else if (e.altKey) {
+            const result = moveToSibling(tree, path, selectedIndex, 1);
+            if (result) applyAction(result);
           } else if (e.shiftKey) {
             const result = swapDown(tree, path, selectedIndex);
             if (result) applyAction(result);
@@ -418,7 +461,7 @@ export default function App() {
             const result = insertParent(tree, path, selectedIndex);
             if (result) applyAction(result);
           } else if (e.altKey) {
-            const result = mergeIntoParent(tree, path, selectedIndex);
+            const result = moveToParentLevel(tree, path, selectedIndex);
             if (result) applyAction(result);
           } else if (path.length > 0) {
             slideNavigate('left', path.slice(0, -1), path[path.length - 1]);
@@ -468,7 +511,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -476,7 +519,7 @@ export default function App() {
     if (el) el.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex, path]);
 
-  // Load default file on startup (Electron only)
+  // Load default file and settings on startup (Electron only)
   useEffect(() => {
     if (window.treenote?.getDefaultFile) {
       window.treenote.getDefaultFile().then((content) => {
@@ -488,7 +531,59 @@ export default function App() {
         }
       });
     }
+    if (window.treenote?.getSettings) {
+      window.treenote.getSettings().then((config) => {
+        if (config.physics) setPhysics(config.physics);
+      });
+    }
   }, []);
+
+  // Physics animation loop for ejecting queue items
+  useEffect(() => {
+    if (ejecting.length === 0) return;
+    let raf;
+    const step = () => {
+      setEjecting(prev => {
+        const next = prev.map(item => ({
+          ...item,
+          x: item.x + item.vx,
+          y: item.y + item.vy,
+          rotation: item.rotation + item.vr,
+          vy: item.vy + item.ay,
+        }));
+        return next.filter(item => item.y < 800);
+      });
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [ejecting.length > 0]);
+
+  function ejectQueueItem(index) {
+    const el = document.querySelectorAll('.queue-box')[index];
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const item = queue[index];
+    setEjecting(prev => [...prev, {
+      ...item,
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      vx: physics.vx,
+      vy: physics.vy,
+      ay: physics.gravity,
+      vr: (Math.random() * 2 - 1) * physics.spin,
+      rotation: 0,
+      id: Date.now(),
+    }]);
+    setQueue(q => q.filter((_, i) => i !== index));
+    if (queue.length <= 1) {
+      setFocus('graph');
+      setQueueIndex(0);
+    } else {
+      setQueueIndex(i => Math.min(i, queue.length - 2));
+    }
+  }
 
   function handleFileLoad(e) {
     const file = e.target.files[0];
@@ -550,6 +645,17 @@ export default function App() {
             }
           }}>
             Save
+          </button>
+        )}
+        {window.treenote?.getSettings && (
+          <button className="load-btn settings-btn" onClick={() => {
+            window.treenote.getSettings().then((config) => {
+              setSettingsPath(config.defaultFile || '');
+              setSettingsPhysics(config.physics || physics);
+              setSettingsOpen(true);
+            });
+          }}>
+            &#9881;
           </button>
         )}
         <input
@@ -653,9 +759,7 @@ export default function App() {
                       <span className="node-text"><Linkify text={node.text} /></span>
                       <div className="node-meta">
                         {node.checked && <span>&#10003;</span>}
-                        {node.children.length > 0 && (
-                          <span className="child-count">{node.children.length}</span>
-                        )}
+                        <ChildCount children={node.children} />
                       </div>
                     </div>
                   ))}
@@ -760,9 +864,7 @@ export default function App() {
                       <span className="node-text"><Linkify text={child.text} /></span>
                       <div className="node-meta">
                         {child.checked && <span>&#10003;</span>}
-                        {child.children.length > 0 && (
-                          <span className="child-count">{child.children.length}</span>
-                        )}
+                        <ChildCount children={child.children} />
                       </div>
                     </div>
                   ))}
@@ -773,6 +875,25 @@ export default function App() {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
+      {ejecting.map((item) => (
+        <div
+          key={item.id}
+          className="queue-box ejecting"
+          style={{
+            position: 'fixed',
+            left: item.x,
+            top: item.y,
+            width: item.width,
+            transform: `rotate(${item.rotation}rad)`,
+            pointerEvents: 'none',
+            zIndex: 400,
+          }}
+        >
+          <span className="queue-text" style={{ textDecoration: 'line-through' }}>
+            {item.text || '...'}
+          </span>
+        </div>
+      ))}
       {deleteConfirm && (
         <div className="modal-overlay">
           <div className="modal">
@@ -798,6 +919,74 @@ export default function App() {
             </div>
             <div className="modal-option" onClick={() => setClearCheckedConfirm(false)}>
               <kbd>2</kbd> <span>Cancel</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {settingsOpen && (
+        <div className="modal-overlay" onClick={() => setSettingsOpen(false)}>
+          <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Settings</div>
+            <div className="settings-row">
+              <label className="settings-label">Default file</label>
+              <div className="settings-file-row">
+                <span className="settings-path">{settingsPath || 'Not set'}</span>
+                <button className="load-btn" onClick={() => {
+                  window.treenote.openFileDialog().then((filePath) => {
+                    if (filePath) setSettingsPath(filePath);
+                  });
+                }}>
+                  Browse
+                </button>
+              </div>
+            </div>
+            <div className="settings-row">
+              <label className="settings-label">Eject physics</label>
+              <div className="settings-physics-grid">
+                {[
+                  { key: 'vx', label: 'Vel X' },
+                  { key: 'vy', label: 'Vel Y' },
+                  { key: 'gravity', label: 'Gravity' },
+                  { key: 'spin', label: 'Spin' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="settings-physics-field">
+                    <span>{label}</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settingsPhysics[key]}
+                      onChange={(e) => setSettingsPhysics(p => ({ ...p, [key]: parseFloat(e.target.value) || 0 }))}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="settings-actions">
+              <button className="load-btn" onClick={() => setSettingsOpen(false)}>
+                Cancel
+              </button>
+              <button className="load-btn settings-save-btn" onClick={() => {
+                setPhysics(settingsPhysics);
+                window.treenote.saveSettings({ defaultFile: settingsPath, physics: settingsPhysics }).then((ok) => {
+                  if (ok) {
+                    setSettingsOpen(false);
+                    setToast('Settings saved');
+                    setTimeout(() => setToast(null), 1000);
+                    // Reload file with new path
+                    window.treenote.getDefaultFile().then((content) => {
+                      if (content) {
+                        setTree(parseMarkdownTree(content));
+                        setPath([]);
+                        setSelectedIndex(0);
+                        setUndoStack([]);
+                      }
+                    });
+                  }
+                });
+              }}>
+                Save
+              </button>
             </div>
           </div>
         </div>
