@@ -20,6 +20,7 @@ import {
 } from './actions';
 import ChildCount from './components/ChildCount';
 import Linkify from './components/Linkify';
+import SettingsModal from './components/SettingsModal';
 import './App.css';
 
 const COL_STEP = 460;
@@ -33,8 +34,7 @@ export default function App() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [clearCheckedConfirm, setClearCheckedConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsPath, setSettingsPath] = useState('');
-  const [settingsPhysics, setSettingsPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
+  const [settingsInitial, setSettingsInitial] = useState({ path: '', physics: null });
   const [toast, setToast] = useState(null);
   const [queue, setQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(0);
@@ -630,8 +630,7 @@ export default function App() {
         {window.treenote?.getSettings && (
           <button className="load-btn settings-btn" onClick={() => {
             window.treenote.getSettings().then((config) => {
-              setSettingsPath(config.defaultFile || '');
-              setSettingsPhysics(config.physics || physics);
+              setSettingsInitial({ path: config.defaultFile || '', physics: config.physics || physics });
               setSettingsOpen(true);
             });
           }}>
@@ -904,72 +903,29 @@ export default function App() {
         </div>
       )}
       {settingsOpen && (
-        <div className="modal-overlay" onClick={() => setSettingsOpen(false)}>
-          <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">Settings</div>
-            <div className="settings-row">
-              <label className="settings-label">Default file</label>
-              <div className="settings-file-row">
-                <span className="settings-path">{settingsPath || 'Not set'}</span>
-                <button className="load-btn" onClick={() => {
-                  window.treenote.openFileDialog().then((filePath) => {
-                    if (filePath) setSettingsPath(filePath);
-                  });
-                }}>
-                  Browse
-                </button>
-              </div>
-            </div>
-            <div className="settings-row">
-              <label className="settings-label">Eject physics</label>
-              <div className="settings-physics-grid">
-                {[
-                  { key: 'vx', label: 'Vel X' },
-                  { key: 'vy', label: 'Vel Y' },
-                  { key: 'gravity', label: 'Gravity' },
-                  { key: 'spin', label: 'Spin' },
-                ].map(({ key, label }) => (
-                  <label key={key} className="settings-physics-field">
-                    <span>{label}</span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={settingsPhysics[key]}
-                      onChange={(e) => setSettingsPhysics(p => ({ ...p, [key]: parseFloat(e.target.value) || 0 }))}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="settings-actions">
-              <button className="load-btn" onClick={() => setSettingsOpen(false)}>
-                Cancel
-              </button>
-              <button className="load-btn settings-save-btn" onClick={() => {
-                setPhysics(settingsPhysics);
-                window.treenote.saveSettings({ defaultFile: settingsPath, physics: settingsPhysics }).then((ok) => {
-                  if (ok) {
-                    setSettingsOpen(false);
-                    setToast('Settings saved');
-                    setTimeout(() => setToast(null), 1000);
-                    // Reload file with new path
-                    window.treenote.getDefaultFile().then((content) => {
-                      if (content) {
-                        setTree(parseMarkdownTree(content));
-                        setPath([]);
-                        setSelectedIndex(0);
-                        setUndoStack([]);
-                      }
-                    });
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          initialPath={settingsInitial.path}
+          initialPhysics={settingsInitial.physics || physics}
+          onSave={({ path: filePath, physics: newPhysics }) => {
+            setPhysics(newPhysics);
+            window.treenote.saveSettings({ defaultFile: filePath, physics: newPhysics }).then((ok) => {
+              if (ok) {
+                setSettingsOpen(false);
+                setToast('Settings saved');
+                setTimeout(() => setToast(null), 1000);
+                window.treenote.getDefaultFile().then((content) => {
+                  if (content) {
+                    setTree(parseMarkdownTree(content));
+                    setPath([]);
+                    setSelectedIndex(0);
+                    setUndoStack([]);
                   }
                 });
-              }}>
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
+              }
+            });
+          }}
+        />
       )}
       <div className="hotkey-legend">
         {mode === 'visual' ? (

@@ -1,0 +1,82 @@
+.settings-modal {
+  min-width: 380px;
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-label {
+  font-size: 13px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settings-file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-path {
+  flex: 1;
+  font-size: 14px;
+  color: #e0e0e0;
+  background: #1a1a2e;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #0f3460;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.settings-physics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.settings-physics-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #888;
+}
+
+.settings-physics-field input {
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.settings-physics-field input:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.settings-save-btn {
+  background: #e94560 !important;
+  border-color: #e94560 !important;
+  color: #fff !important;
+}
+
+.settings-save-btn:hover {
+  background: #d63050 !important;
+}
