@@ -442,50 +442,6 @@ body {
   font-size: 18px;
 }
 
-/* Hotkey legend */
-.hotkey-legend {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  background: #16213e;
-  border: 1px solid #0f3460;
-  border-radius: 8px;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 100;
-  opacity: 0.75;
-  transition: opacity 0.2s;
-}
-
-.hotkey-legend:hover {
-  opacity: 1;
-}
-
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.legend-keys {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.legend-desc {
-  font-size: 11px;
-  color: #888;
-  white-space: nowrap;
-}
-
-.legend-hint {
-  font-style: italic;
-  color: #666;
-}
-
 /* Keycap styling */
 kbd {
   display: inline-flex;
@@ -578,15 +534,3 @@ kbd {
   line-height: 1;
 }
 
-.arrow-keys kbd {
-  font-size: 8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0;
-}
-
-.legend-plus {
-  font-size: 10px;
-  color: #666;
-  margin: 0 1px;
-}
