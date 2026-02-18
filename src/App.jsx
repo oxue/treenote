@@ -21,6 +21,7 @@ import {
 import ChildCount from './components/ChildCount';
 import Linkify from './components/Linkify';
 import SettingsModal from './components/SettingsModal';
+import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
 import './App.css';
 
 const COL_STEP = 460;
@@ -874,33 +875,17 @@ export default function App() {
         </div>
       ))}
       {deleteConfirm && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-title">Delete node with children?</div>
-            <div className="modal-option" onClick={() => { applyAction(deleteNodeWithChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}>
-              <kbd>1</kbd> <span>Delete with children</span>
-            </div>
-            <div className="modal-option" onClick={() => { applyAction(deleteNodeKeepChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}>
-              <kbd>2</kbd> <span>Keep children, delete node</span>
-            </div>
-            <div className="modal-option" onClick={() => setDeleteConfirm(false)}>
-              <kbd>3</kbd> <span>Cancel</span>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          onDeleteWithChildren={() => { applyAction(deleteNodeWithChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}
+          onDeleteKeepChildren={() => { applyAction(deleteNodeKeepChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}
+          onCancel={() => setDeleteConfirm(false)}
+        />
       )}
       {clearCheckedConfirm && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-title">Delete all checked items in this column?</div>
-            <div className="modal-option" onClick={() => { const r = deleteCheckedNodes(tree, path, selectedIndex); if (r) applyAction(r); setClearCheckedConfirm(false); }}>
-              <kbd>1</kbd> <span>Delete checked</span>
-            </div>
-            <div className="modal-option" onClick={() => setClearCheckedConfirm(false)}>
-              <kbd>2</kbd> <span>Cancel</span>
-            </div>
-          </div>
-        </div>
+        <ClearCheckedModal
+          onConfirm={() => { const r = deleteCheckedNodes(tree, path, selectedIndex); if (r) applyAction(r); setClearCheckedConfirm(false); }}
+          onCancel={() => setClearCheckedConfirm(false)}
+        />
       )}
       {settingsOpen && (
         <SettingsModal
