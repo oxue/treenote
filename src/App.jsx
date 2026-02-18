@@ -23,6 +23,7 @@ import Linkify from './components/Linkify';
 import SettingsModal from './components/SettingsModal';
 import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
 import HotkeyLegend from './components/HotkeyLegend';
+import QueueBar from './components/QueueBar';
 import './App.css';
 
 const COL_STEP = 460;
@@ -663,60 +664,17 @@ export default function App() {
         )}
       </div>
 
-      {queue.length > 0 && (
-        <div className="queue-bar">
-          <div className="queue-label">Queue</div>
-          <div className="queue-items">
-            {queue.map((item, i) => {
-              const isSelected = focus === 'queue' && i === queueIndex;
-              const isEditing = isSelected && mode === 'edit' && item.type === 'temp';
-              return (
-                <div
-                  key={i}
-                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${item.checked ? 'checked' : ''}`}
-                  onClick={() => {
-                    setFocus('queue');
-                    setQueueIndex(i);
-                  }}
-                >
-                  {isEditing ? (
-                    <textarea
-                      ref={queueEditRef}
-                      className="queue-text-input"
-                      defaultValue={item.text}
-                      rows={1}
-                      autoFocus
-                      onInput={(e) => {
-                        e.target.style.height = 'auto';
-                        e.target.style.height = e.target.scrollHeight + 'px';
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          e.preventDefault();
-                          const newText = e.target.value.trim();
-                          setQueue(q => q.map((it, idx) => idx === i ? { ...it, text: newText } : it));
-                          setMode('visual');
-                        }
-                        e.stopPropagation();
-                      }}
-                      onBlur={(e) => {
-                        const newText = e.target.value.trim();
-                        setQueue(q => q.map((it, idx) => idx === i ? { ...it, text: newText } : it));
-                        setMode('visual');
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <span className="queue-text">
-                      {item.text || (item.type === 'temp' ? '...' : '')}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <QueueBar
+        queue={queue}
+        queueIndex={queueIndex}
+        focus={focus}
+        mode={mode}
+        ejecting={ejecting}
+        queueEditRef={queueEditRef}
+        onSelectItem={(i) => { setFocus('queue'); setQueueIndex(i); }}
+        onUpdateText={(i, text) => setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it))}
+        onExitEdit={() => setMode('visual')}
+      />
 
       {!tree ? (
         <div className="empty-state">Load a markdown file to get started</div>
@@ -856,25 +814,6 @@ export default function App() {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
-      {ejecting.map((item) => (
-        <div
-          key={item.id}
-          className="queue-box ejecting"
-          style={{
-            position: 'fixed',
-            left: item.x,
-            top: item.y,
-            width: item.width,
-            transform: `rotate(${item.rotation}rad)`,
-            pointerEvents: 'none',
-            zIndex: 400,
-          }}
-        >
-          <span className="queue-text" style={{ textDecoration: 'line-through' }}>
-            {item.text || '...'}
-          </span>
-        </div>
-      ))}
       {deleteConfirm && (
         <DeleteConfirmModal
           onDeleteWithChildren={() => { applyAction(deleteNodeWithChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}
