@@ -24,6 +24,7 @@ import SettingsModal from './components/SettingsModal';
 import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
 import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
+import useEjectAnimation from './hooks/useEjectAnimation';
 import './App.css';
 
 const COL_STEP = 460;
@@ -41,7 +42,6 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [queue, setQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(0);
-  const [ejecting, setEjecting] = useState([]);
   const [physics, setPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
   const [focus, setFocus] = useState('graph');
   const editInputRef = useRef(null);
@@ -54,6 +54,8 @@ export default function App() {
   const rightSvgRef = useRef(null);
   const [leftLines, setLeftLines] = useState([]);
   const [rightLines, setRightLines] = useState([]);
+
+  const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex);
 
   const sliderRef = useRef(null);
   const animatingRef = useRef(false);
@@ -520,53 +522,6 @@ export default function App() {
       });
     }
   }, []);
-
-  // Physics animation loop for ejecting queue items
-  useEffect(() => {
-    if (ejecting.length === 0) return;
-    let raf;
-    const step = () => {
-      setEjecting(prev => {
-        const next = prev.map(item => ({
-          ...item,
-          x: item.x + item.vx,
-          y: item.y + item.vy,
-          rotation: item.rotation + item.vr,
-          vy: item.vy + item.ay,
-        }));
-        return next.filter(item => item.y < 800);
-      });
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [ejecting.length > 0]);
-
-  function ejectQueueItem(index) {
-    const el = document.querySelectorAll('.queue-box')[index];
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const item = queue[index];
-    setEjecting(prev => [...prev, {
-      ...item,
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-      vx: physics.vx,
-      vy: physics.vy,
-      ay: physics.gravity,
-      vr: (Math.random() * 2 - 1) * physics.spin,
-      rotation: 0,
-      id: Date.now(),
-    }]);
-    setQueue(q => q.filter((_, i) => i !== index));
-    if (queue.length <= 1) {
-      setFocus('graph');
-      setQueueIndex(0);
-    } else {
-      setQueueIndex(i => Math.min(i, queue.length - 2));
-    }
-  }
 
   function handleFileLoad(e) {
     const file = e.target.files[0];
