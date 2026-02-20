@@ -1,0 +1,131 @@
+.auth-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: #888;
+  font-size: 18px;
+  background: #1a1a2e;
+}
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #1a1a2e;
+}
+
+.login-card {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 12px;
+  padding: 40px;
+  width: 360px;
+  text-align: center;
+}
+
+.login-title {
+  font-size: 28px;
+  color: #e94560;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  color: #888;
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #0f3460;
+  border-color: #e94560;
+}
+
+.login-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.email-input {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.email-input:focus {
+  border-color: #e94560;
+}
+
+.email-input::placeholder {
+  color: #555;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: #555;
+  font-size: 13px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #0f3460;
+}
+
+.magic-link-sent {
+  color: #888;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.magic-link-sent p {
+  color: #4ade80;
+}
+
+.login-error {
+  margin-top: 16px;
+  color: #e94560;
+  font-size: 13px;
+}

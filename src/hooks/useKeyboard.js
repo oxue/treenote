@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { serializeTree } from '../parser';
+import { serializeTree } from '../treeIO';
 import {
   insertSiblingBelow,
   insertSiblingAbove,
@@ -21,13 +21,16 @@ export default function useKeyboard({
   focus, queue, queueIndex,
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
+  onSave,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
       // Cmd+S saves in any mode
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        if (tree && window.treenote?.saveDefaultFile) {
+        if (tree && onSave) {
+          onSave();
+        } else if (tree && window.treenote?.saveDefaultFile) {
           window.treenote.saveDefaultFile(serializeTree(tree)).then((ok) => {
             setToast(ok ? 'Saved' : 'Save failed');
             setTimeout(() => setToast(null), 1000);
@@ -288,5 +291,5 @@ export default function useKeyboard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave]);
 }

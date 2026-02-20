@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { parseMarkdownTree, serializeTree } from './parser';
+import { parseTree, serializeTree } from './treeIO';
 import {
   cloneTree,
   editNodeText,
@@ -17,9 +17,12 @@ import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
 import useKeyboard from './hooks/useKeyboard';
+import { loadUserTree, saveUserTree } from './storage';
+import { supabase } from './supabaseClient';
 import './App.css';
 
-export default function App() {
+export default function App({ session }) {
+  const userId = session?.user?.id;
   const [tree, setTree] = useState(null);
   const [path, setPath] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -137,12 +140,26 @@ export default function App() {
     }
   }, [mode, focus]);
 
+  const handleSave = useCallback(() => {
+    if (!tree) return;
+    if (userId) {
+      saveUserTree(userId, tree).then(() => {
+        setToast('Saved');
+        setTimeout(() => setToast(null), 1000);
+      }).catch(() => {
+        setToast('Save failed');
+        setTimeout(() => setToast(null), 1000);
+      });
+    }
+  }, [tree, userId]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, animatingRef, ejectQueueItem,
     focus, queue, queueIndex,
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode,
+    onSave: userId ? handleSave : undefined,
   });
 
   // Scroll selected item into view
@@ -151,12 +168,32 @@ export default function App() {
     if (el) el.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex, path]);
 
-  // Load default file and settings on startup (Electron only)
+  // Auto-save debounce ref
+  const saveTimeoutRef = useRef(null);
+
+  // Load tree on startup — from Supabase (web) or Electron (desktop)
   useEffect(() => {
-    if (window.treenote?.getDefaultFile) {
+    if (userId) {
+      loadUserTree(userId).then((data) => {
+        if (data) {
+          setTree(data);
+          setPath([]);
+          setSelectedIndex(0);
+        } else {
+          // New user — start with a default tree
+          setTree([{ text: 'Welcome to Treenote', checked: false, children: [
+            { text: 'Use arrow keys to navigate', checked: false, children: [] },
+            { text: 'Press Enter to edit', checked: false, children: [] },
+            { text: 'Press Cmd+Down to add items', checked: false, children: [] },
+          ]}]);
+        }
+      }).catch(() => {
+        setTree([{ text: 'My Notes', checked: false, children: [] }]);
+      });
+    } else if (window.treenote?.getDefaultFile) {
       window.treenote.getDefaultFile().then((content) => {
         if (content) {
-          const parsed = parseMarkdownTree(content);
+          const parsed = parseTree(content);
           setTree(parsed);
           setPath([]);
           setSelectedIndex(0);
@@ -168,14 +205,29 @@ export default function App() {
         if (config.physics) setPhysics(config.physics);
       });
     }
-  }, []);
+  }, [userId]);
+
+  // Auto-save to Supabase when tree changes (debounced)
+  useEffect(() => {
+    if (!userId || !tree) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveUserTree(userId, tree).catch(() => {
+        setToast('Auto-save failed');
+        setTimeout(() => setToast(null), 2000);
+      });
+    }, 1500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [tree, userId]);
 
   function handleFileLoad(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const parsed = parseMarkdownTree(ev.target.result);
+      const parsed = parseTree(ev.target.result);
       setTree(parsed);
       setPath([]);
       setSelectedIndex(0);
@@ -220,7 +272,7 @@ export default function App() {
         <button className="load-btn" onClick={() => fileInputRef.current.click()}>
           Load File
         </button>
-        {tree && (
+        {tree && !userId && (
           <button className="load-btn" onClick={() => {
             if (window.treenote?.saveDefaultFile) {
               window.treenote.saveDefaultFile(serializeTree(tree)).then((ok) => {
@@ -228,6 +280,19 @@ export default function App() {
                 setTimeout(() => setToast(null), 1000);
               });
             }
+          }}>
+            Save
+          </button>
+        )}
+        {tree && userId && (
+          <button className="load-btn" onClick={() => {
+            saveUserTree(userId, tree).then(() => {
+              setToast('Saved');
+              setTimeout(() => setToast(null), 1000);
+            }).catch(() => {
+              setToast('Save failed');
+              setTimeout(() => setToast(null), 1000);
+            });
           }}>
             Save
           </button>
@@ -242,10 +307,15 @@ export default function App() {
             &#9881;
           </button>
         )}
+        {userId && (
+          <button className="load-btn" onClick={() => supabase.auth.signOut()}>
+            Logout
+          </button>
+        )}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".md,.txt"
+          accept=".yaml,.yml,.md,.txt"
           style={{ display: 'none' }}
           onChange={handleFileLoad}
         />
@@ -443,7 +513,7 @@ export default function App() {
                 setTimeout(() => setToast(null), 1000);
                 window.treenote.getDefaultFile().then((content) => {
                   if (content) {
-                    setTree(parseMarkdownTree(content));
+                    setTree(parseTree(content));
                     setPath([]);
                     setSelectedIndex(0);
                     setUndoStack([]);
