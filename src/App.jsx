@@ -29,6 +29,7 @@ export default function App({ session }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState('visual');
   const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [clearCheckedConfirm, setClearCheckedConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -93,11 +94,12 @@ export default function App({ session }) {
   // Apply an action result and push undo
   const applyAction = useCallback((result) => {
     if (!result || !tree) return;
-    setUndoStack(stack => [...stack, cloneTree(tree)]);
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack([]);
     setTree(result.tree);
     setPath(result.path);
     setSelectedIndex(result.selectedIndex);
-  }, [tree]);
+  }, [tree, path, selectedIndex]);
 
   const enterEditMode = useCallback(() => {
     if (!selectedNode) return;
@@ -122,10 +124,23 @@ export default function App({ session }) {
 
   const undo = useCallback(() => {
     if (undoStack.length === 0) return;
-    const prevTree = undoStack[undoStack.length - 1];
+    const prev = undoStack[undoStack.length - 1];
     setUndoStack(stack => stack.slice(0, -1));
-    setTree(prevTree);
-  }, [undoStack]);
+    setRedoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setTree(prev.tree);
+    setPath(prev.path);
+    setSelectedIndex(prev.selectedIndex);
+  }, [undoStack, tree, path, selectedIndex]);
+
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack(stack => stack.slice(0, -1));
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setTree(next.tree);
+    setPath(next.path);
+    setSelectedIndex(next.selectedIndex);
+  }, [redoStack, tree, path, selectedIndex]);
 
   // Focus textarea when entering edit mode
   useEffect(() => {
@@ -158,7 +173,7 @@ export default function App({ session }) {
 
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
-    getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, animatingRef, ejectQueueItem,
+    getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
     focus, queue, queueIndex,
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
@@ -282,6 +297,7 @@ export default function App({ session }) {
       setPath([]);
       setSelectedIndex(0);
       setUndoStack([]);
+      setRedoStack([]);
       setMode('visual');
     };
     reader.readAsText(file);
@@ -567,6 +583,7 @@ export default function App({ session }) {
                     setPath([]);
                     setSelectedIndex(0);
                     setUndoStack([]);
+                    setRedoStack([]);
                   }
                 });
               }

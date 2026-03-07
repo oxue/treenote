@@ -51,6 +51,14 @@ export default function HotkeyLegend({ mode }) {
             <span className="legend-desc">Undo</span>
           </div>
           <div className="legend-row">
+            <span className="legend-keys arrow-keys">
+              <kbd>&#8679;</kbd>
+              <span className="legend-plus">+</span>
+              <kbd>Z</kbd>
+            </span>
+            <span className="legend-desc">Redo</span>
+          </div>
+          <div className="legend-row">
             <kbd>q</kbd>
             <span className="legend-desc">Add to queue</span>
           </div>
