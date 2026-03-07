@@ -436,7 +436,11 @@ export default function App({ session }) {
                         slideNavigate('left', path.slice(0, -1), i);
                       }}
                     >
-                      <span className="node-text"><Linkify text={node.text} /></span>
+                      {node.markdown ? (
+                        <span className="node-text node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(node.text) }} />
+                      ) : (
+                        <span className="node-text"><Linkify text={node.text} /></span>
+                      )}
                       <div className="node-meta">
                         {node.checked && <span>&#10003;</span>}
                         <ChildCount children={node.children} />
@@ -544,7 +548,11 @@ export default function App({ session }) {
                         slideNavigate('right', [...path, selectedIndex], i);
                       }}
                     >
-                      <span className="node-text"><Linkify text={child.text} /></span>
+                      {child.markdown ? (
+                        <span className="node-text node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(child.text) }} />
+                      ) : (
+                        <span className="node-text"><Linkify text={child.text} /></span>
+                      )}
                       <div className="node-meta">
                         {child.checked && <span>&#10003;</span>}
                         <ChildCount children={child.children} />
