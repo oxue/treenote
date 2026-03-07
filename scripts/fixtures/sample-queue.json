@@ -1,0 +1,5 @@
+[
+  { "type": "ref", "path": [0], "index": 1, "text": "Code review for Alice", "checked": true },
+  { "type": "ref", "path": [1], "index": 0, "text": "Grocery shopping", "checked": false },
+  { "type": "temp", "text": "Quick note", "checked": false }
+]

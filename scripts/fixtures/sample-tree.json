@@ -1,0 +1,53 @@
+[
+  {
+    "text": "Work Projects",
+    "checked": false,
+    "children": [
+      {
+        "text": "Ship new feature by Friday",
+        "checked": false,
+        "children": [
+          { "text": "Write the API endpoint", "checked": true, "children": [] },
+          { "text": "Build the frontend component", "checked": false, "children": [] },
+          { "text": "Write tests", "checked": false, "children": [] }
+        ]
+      },
+      {
+        "text": "Code review for Alice",
+        "checked": true,
+        "children": []
+      },
+      {
+        "text": "Update documentation",
+        "checked": false,
+        "children": [
+          { "text": "API docs", "checked": false, "children": [] },
+          { "text": "README updates", "checked": false, "children": [] }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Personal",
+    "checked": false,
+    "children": [
+      { "text": "Grocery shopping", "checked": false, "children": [] },
+      { "text": "Call dentist", "checked": true, "children": [] },
+      { "text": "Read that book", "checked": false, "children": [] }
+    ]
+  },
+  {
+    "text": "Ideas",
+    "checked": false,
+    "children": [
+      {
+        "text": "App improvements",
+        "checked": false,
+        "children": [
+          { "text": "Dark mode toggle", "checked": false, "children": [] },
+          { "text": "Export to markdown", "checked": false, "children": [] }
+        ]
+      }
+    ]
+  }
+]

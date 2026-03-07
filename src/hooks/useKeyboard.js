@@ -16,12 +16,12 @@ import {
 } from '../actions';
 
 export default function useKeyboard({
-  tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen,
+  tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
   getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, animatingRef, ejectQueueItem,
   focus, queue, queueIndex,
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
-  onSave,
+  onSave, setBackupOpen,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -41,11 +41,19 @@ export default function useKeyboard({
 
       if (mode === 'edit') return;
 
-      // Settings modal — Escape closes it
+      // Settings / backup modal — Escape closes it
       if (settingsOpen) {
         if (e.key === 'Escape') {
           e.preventDefault();
           setSettingsOpen(false);
+        }
+        return;
+      }
+
+      if (backupOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setBackupOpen(false);
         }
         return;
       }
@@ -288,10 +296,14 @@ export default function useKeyboard({
             }]);
           }
           break;
+        case 'b':
+          e.preventDefault();
+          setBackupOpen(true);
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen]);
 }

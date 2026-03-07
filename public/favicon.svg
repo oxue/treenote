@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#e94560"/>
+  <g stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <!-- trunk -->
+    <line x1="10" y1="8" x2="10" y2="24"/>
+    <!-- branches -->
+    <line x1="10" y1="10" x2="22" y2="10"/>
+    <line x1="10" y1="16" x2="19" y2="16"/>
+    <line x1="10" y1="22" x2="16" y2="22"/>
+    <!-- sub-branch -->
+    <line x1="22" y1="10" x2="22" y2="14"/>
+  </g>
+  <!-- nodes -->
+  <circle cx="22" cy="10" r="2.2" fill="#fff"/>
+  <circle cx="19" cy="16" r="2.2" fill="#fff"/>
+  <circle cx="16" cy="22" r="2.2" fill="#fff"/>
+  <circle cx="22" cy="14" r="2.2" fill="#1a1a2e"/>
+  <circle cx="22" cy="14" r="2.2" stroke="#fff" stroke-width="1.2" fill="none"/>
+</svg>

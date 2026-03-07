@@ -77,7 +77,7 @@ ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
     filters: [
-      { name: 'Markdown/Text', extensions: ['md', 'txt'] },
+      { name: 'Tree Files', extensions: ['yaml', 'yml', 'md', 'txt'] },
     ],
   });
   if (result.canceled || result.filePaths.length === 0) return null;

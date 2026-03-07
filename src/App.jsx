@@ -10,6 +10,7 @@ import {
 import ChildCount from './components/ChildCount';
 import Linkify from './components/Linkify';
 import SettingsModal from './components/SettingsModal';
+import BackupModal from './components/BackupModal';
 import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
 import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
@@ -17,7 +18,7 @@ import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
 import useKeyboard from './hooks/useKeyboard';
-import { loadUserTree, saveUserTree } from './storage';
+import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
 import './App.css';
 
@@ -31,6 +32,7 @@ export default function App({ session }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [clearCheckedConfirm, setClearCheckedConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
   const [settingsInitial, setSettingsInitial] = useState({ path: '', physics: null });
   const [toast, setToast] = useState(null);
   const [queue, setQueue] = useState([]);
@@ -40,6 +42,7 @@ export default function App({ session }) {
   const editInputRef = useRef(null);
   const queueEditRef = useRef(null);
   const fileInputRef = useRef(null);
+  const loadedRef = useRef(false);
 
   const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
@@ -154,11 +157,11 @@ export default function App({ session }) {
   }, [tree, userId]);
 
   useKeyboard({
-    tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen,
+    tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, animatingRef, ejectQueueItem,
     focus, queue, queueIndex,
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
-    setFocus, setSelectedIndex, setPath, setMode,
+    setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
   });
 
@@ -168,37 +171,61 @@ export default function App({ session }) {
     if (el) el.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex, path]);
 
-  // Auto-save debounce ref
+  // Auto-save debounce refs
   const saveTimeoutRef = useRef(null);
+  const queueSaveTimeoutRef = useRef(null);
 
-  // Load tree on startup — from Supabase (web) or Electron (desktop)
+  // Load tree on startup — always from Supabase when logged in
   useEffect(() => {
+    loadedRef.current = false;
     if (userId) {
-      loadUserTree(userId).then((data) => {
+      // Backup current tree before overwriting with loaded data
+      loadUserTree(userId).then(async (existing) => {
+        if (existing) {
+          saveBackup(userId, existing).catch(() => {});
+        }
+        const data = existing;
         if (data) {
           setTree(data);
           setPath([]);
           setSelectedIndex(0);
+        } else if (window.treenote?.getDefaultFile) {
+          // New cloud user in Electron — migrate local file to cloud
+          const content = await window.treenote.getDefaultFile();
+          if (content) {
+            const parsed = parseTree(content);
+            setTree(parsed);
+            setPath([]);
+            setSelectedIndex(0);
+            // Save local data to cloud
+            saveUserTree(userId, parsed).catch(() => {});
+          } else {
+            setTree([{ text: 'Welcome to Treenote', checked: false, children: [
+              { text: 'Use arrow keys to navigate', checked: false, children: [] },
+              { text: 'Press Enter to edit', checked: false, children: [] },
+              { text: 'Press Cmd+Down to add items', checked: false, children: [] },
+            ]}]);
+          }
         } else {
-          // New user — start with a default tree
+          // New cloud user on web — default tree
           setTree([{ text: 'Welcome to Treenote', checked: false, children: [
             { text: 'Use arrow keys to navigate', checked: false, children: [] },
             { text: 'Press Enter to edit', checked: false, children: [] },
             { text: 'Press Cmd+Down to add items', checked: false, children: [] },
           ]}]);
         }
+        loadedRef.current = true;
       }).catch(() => {
-        setTree([{ text: 'My Notes', checked: false, children: [] }]);
+        // Do NOT set a default tree — it would get auto-saved and wipe real data
+        setToast('Failed to load notes. Please refresh.');
+        setTimeout(() => setToast(null), 5000);
       });
-    } else if (window.treenote?.getDefaultFile) {
-      window.treenote.getDefaultFile().then((content) => {
-        if (content) {
-          const parsed = parseTree(content);
-          setTree(parsed);
-          setPath([]);
-          setSelectedIndex(0);
-        }
-      });
+    }
+    // Load queue from cloud
+    if (userId) {
+      loadUserQueue(userId).then((data) => {
+        if (data && data.length > 0) setQueue(data);
+      }).catch(() => {});
     }
     if (window.treenote?.getSettings) {
       window.treenote.getSettings().then((config) => {
@@ -209,7 +236,7 @@ export default function App({ session }) {
 
   // Auto-save to Supabase when tree changes (debounced)
   useEffect(() => {
-    if (!userId || !tree) return;
+    if (!userId || !tree || !loadedRef.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       saveUserTree(userId, tree).catch(() => {
@@ -221,6 +248,29 @@ export default function App({ session }) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [tree, userId]);
+
+  // Auto-save queue to Supabase when queue changes (debounced)
+  useEffect(() => {
+    if (!userId) return;
+    if (queueSaveTimeoutRef.current) clearTimeout(queueSaveTimeoutRef.current);
+    queueSaveTimeoutRef.current = setTimeout(() => {
+      saveUserQueue(userId, queue).catch(() => {});
+    }, 1500);
+    return () => {
+      if (queueSaveTimeoutRef.current) clearTimeout(queueSaveTimeoutRef.current);
+    };
+  }, [queue, userId]);
+
+  // Periodic auto-backup every 5 minutes
+  useEffect(() => {
+    if (!userId || !tree) return;
+    const interval = setInterval(() => {
+      saveBackup(userId, tree)
+        .then(() => deleteOldBackups(userId, 20))
+        .catch(() => {});
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [userId, tree]);
 
   function handleFileLoad(e) {
     const file = e.target.files[0];
@@ -521,6 +571,18 @@ export default function App({ session }) {
                 });
               }
             });
+          }}
+        />
+      )}
+      {backupOpen && userId && (
+        <BackupModal
+          userId={userId}
+          onClose={() => setBackupOpen(false)}
+          onRestore={(treeData) => {
+            setTree(treeData);
+            setPath([]);
+            setSelectedIndex(0);
+            setUndoStack([]);
           }}
         />
       )}

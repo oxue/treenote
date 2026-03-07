@@ -1,0 +1,55 @@
+.backup-modal {
+  min-width: 380px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.backup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+}
+
+.backup-date {
+  font-size: 13px;
+  color: #e0e0e0;
+}
+
+.backup-restore-btn {
+  background: #e94560 !important;
+  border-color: #e94560 !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  padding: 4px 12px !important;
+}
+
+.backup-restore-btn:hover {
+  background: #d63050 !important;
+}
+
+.backup-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.backup-loading,
+.backup-empty {
+  color: #888;
+  font-size: 14px;
+  padding: 16px 0;
+  text-align: center;
+}

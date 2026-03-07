@@ -6,7 +6,12 @@
     "dev": "vite",
     "build": "vite build",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder",
+    "screenshot": "node scripts/take-screenshots.mjs",
+    "screenshot:login": "node scripts/take-screenshots.mjs login-page",
+    "screenshot:tree": "node scripts/take-screenshots.mjs main-tree",
+    "screenshot:children": "node scripts/take-screenshots.mjs tree-with-children",
+    "screenshot:queue": "node scripts/take-screenshots.mjs queue-bar"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +39,7 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@vitejs/plugin-react": "^5.1.4",
     "concurrently": "^9.2.1",
     "electron": "^40.4.1",
