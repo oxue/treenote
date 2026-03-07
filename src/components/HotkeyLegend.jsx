@@ -59,6 +59,10 @@ export default function HotkeyLegend({ mode }) {
             <span className="legend-desc">Redo</span>
           </div>
           <div className="legend-row">
+            <kbd>m</kbd>
+            <span className="legend-desc">Toggle markdown</span>
+          </div>
+          <div className="legend-row">
             <kbd>q</kbd>
             <span className="legend-desc">Add to queue</span>
           </div>

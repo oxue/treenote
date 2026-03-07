@@ -226,4 +226,12 @@ export function moveToSibling(tree, path, selectedIndex, direction) {
   };
 }
 
+// Toggle markdown mode on the selected node
+export function toggleMarkdown(tree, path, selectedIndex) {
+  const newTree = cloneTree(tree);
+  const node = getNodeAt(newTree, path, selectedIndex);
+  node.markdown = !node.markdown;
+  return { tree: newTree, path, selectedIndex };
+}
+
 export { cloneTree, getNodeAt, getNodesAt };
