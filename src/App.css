@@ -4,22 +4,13 @@
   box-sizing: border-box;
 }
 
-/* Dark scrollbars */
+/* Hide scrollbars but keep scroll functionality */
 ::-webkit-scrollbar {
-  width: 8px;
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #1a1a2e;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #0f3460;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #1a4a8a;
+* {
+  scrollbar-width: none; /* Firefox */
 }
 
 body {
