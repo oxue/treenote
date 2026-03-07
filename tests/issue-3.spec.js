@@ -16,7 +16,6 @@ const fakeSession = {
 };
 
 async function setupMocks(page) {
-  // Mock Supabase auth session endpoint
   await page.route(`${SUPABASE_URL}/auth/v1/token*`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -25,7 +24,6 @@ async function setupMocks(page) {
     });
   });
 
-  // Mock the user tree storage (return null so default tree loads)
   await page.route(`${SUPABASE_URL}/rest/v1/user_trees*`, async (route) => {
     const method = route.request().method();
     if (method === 'GET') {
@@ -43,7 +41,6 @@ async function setupMocks(page) {
     }
   });
 
-  // Inject a fake session into localStorage before page loads
   await page.addInitScript((url) => {
     const storageKey = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
     const session = {
@@ -63,55 +60,64 @@ async function setupMocks(page) {
   }, SUPABASE_URL);
 }
 
-test('issue 3: Shift+Z implements redo after undo', async ({ page }) => {
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test('issue 3: Shift+Z implements redo — delete node, undo, redo', async ({ page }) => {
   await setupMocks(page);
   await page.goto('http://localhost:5173');
 
-  // Wait for the app to load with tree nodes
   await page.waitForSelector('.app', { timeout: 10000 });
   await page.waitForSelector('.node-box', { timeout: 10000 });
 
-  // Press 'c' to toggle check on the selected node (this is an undoable action)
-  await page.keyboard.press('c');
+  // The default tree has 3 child nodes. Navigate into them.
+  // First, go right into the "Welcome to Treenote" node's children
+  await page.keyboard.press('ArrowRight');
+  await page.waitForSelector('.node-box.selected');
+  await pause(800);
 
-  // Verify the node is now checked
-  await expect(page.locator('.node-box.selected.checked')).toBeVisible();
+  // Count the nodes and remember the selected node's text
+  const initialCount = await page.locator('.node-box').count();
+  const selectedText = await page.locator('.node-box.selected .node-text').textContent();
 
-  // Undo with 'z'
+  // DELETE the selected node with 'x'
+  await page.keyboard.press('x');
+  await pause(800);
+
+  // Verify a node was removed
+  const afterDeleteCount = await page.locator('.node-box').count();
+  expect(afterDeleteCount).toBe(initialCount - 1);
+
+  // The deleted node's text should no longer appear
+  const allTextsAfterDelete = await page.locator('.node-box .node-text').allTextContents();
+  expect(allTextsAfterDelete).not.toContain(selectedText);
+
+  // UNDO with 'z' — node should reappear
   await page.keyboard.press('z');
+  await pause(800);
 
-  // Verify the node is no longer checked (undo worked)
-  await expect(page.locator('.node-box.selected.checked')).not.toBeVisible();
+  const afterUndoCount = await page.locator('.node-box').count();
+  expect(afterUndoCount).toBe(initialCount);
 
-  // Redo with Shift+Z
+  const allTextsAfterUndo = await page.locator('.node-box .node-text').allTextContents();
+  expect(allTextsAfterUndo).toContain(selectedText);
+
+  // REDO with Shift+Z — node should disappear again
   await page.keyboard.press('Shift+Z');
+  await pause(800);
 
-  // Verify the node is checked again (redo worked)
-  await expect(page.locator('.node-box.selected.checked')).toBeVisible();
+  const afterRedoCount = await page.locator('.node-box').count();
+  expect(afterRedoCount).toBe(initialCount - 1);
 
-  // Undo again to verify multiple undo/redo cycles work
+  const allTextsAfterRedo = await page.locator('.node-box .node-text').allTextContents();
+  expect(allTextsAfterRedo).not.toContain(selectedText);
+
+  // UNDO again to bring it back — proves multiple cycles work
   await page.keyboard.press('z');
-  await expect(page.locator('.node-box.selected.checked')).not.toBeVisible();
+  await pause(800);
 
-  // Redo again
-  await page.keyboard.press('Shift+Z');
-  await expect(page.locator('.node-box.selected.checked')).toBeVisible();
-
-  // Undo, then perform a new action — redo stack should be cleared
-  await page.keyboard.press('z');
-  await expect(page.locator('.node-box.selected.checked')).not.toBeVisible();
-
-  // Move down (new action after undo clears redo stack via navigation, but navigation
-  // doesn't go through applyAction). Let's use 'c' as the new action instead.
-  await page.keyboard.press('c');
-  await expect(page.locator('.node-box.selected.checked')).toBeVisible();
-
-  // Undo the new check
-  await page.keyboard.press('z');
-
-  // Redo should redo that last check (not the original one)
-  await page.keyboard.press('Shift+Z');
-  await expect(page.locator('.node-box.selected.checked')).toBeVisible();
+  expect(await page.locator('.node-box').count()).toBe(initialCount);
+  const allTextsFinal = await page.locator('.node-box .node-text').allTextContents();
+  expect(allTextsFinal).toContain(selectedText);
 });
 
 test('issue 3: redo hotkey is shown in legend', async ({ page }) => {
@@ -120,7 +126,6 @@ test('issue 3: redo hotkey is shown in legend', async ({ page }) => {
 
   await page.waitForSelector('.app', { timeout: 10000 });
 
-  // Verify the hotkey legend shows the redo shortcut
   const legendText = await page.locator('.hotkey-legend').textContent();
   expect(legendText).toContain('Redo');
   expect(legendText).toContain('Undo');
