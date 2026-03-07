@@ -13,6 +13,7 @@ import {
   deleteCheckedNodes,
   moveToParentLevel,
   moveToSibling,
+  toggleMarkdown,
 } from '../actions';
 
 export default function useKeyboard({
@@ -299,6 +300,12 @@ export default function useKeyboard({
               text: selectedNode.text,
               checked: selectedNode.checked || false,
             }]);
+          }
+          break;
+        case 'm':
+          e.preventDefault();
+          if (selectedNode) {
+            applyAction(toggleMarkdown(tree, path, selectedIndex));
           }
           break;
         case 'b':

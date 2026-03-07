@@ -20,7 +20,10 @@ import useSvgLines from './hooks/useSvgLines';
 import useKeyboard from './hooks/useKeyboard';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
+import { marked } from 'marked';
 import './App.css';
+
+marked.setOptions({ breaks: true });
 
 export default function App({ session }) {
   const userId = session?.user?.id;
@@ -500,10 +503,13 @@ export default function App({ session }) {
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
+                    ) : node.markdown ? (
+                      <span className="node-text node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(node.text) }} />
                     ) : (
                       <span className="node-text"><Linkify text={node.text} /></span>
                     )}
                     <div className="node-meta">
+                      {node.markdown && <span className="markdown-badge">MD</span>}
                       {node.checked && <span>&#10003;</span>}
                       {node.children.length > 0 && (
                         <span className="child-count">{node.children.length}</span>
