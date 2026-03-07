@@ -17,7 +17,7 @@ import {
 
 export default function useKeyboard({
   tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
-  getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, animatingRef, ejectQueueItem,
+  getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
   focus, queue, queueIndex,
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
@@ -262,8 +262,13 @@ export default function useKeyboard({
           enterEditMode();
           break;
         case 'z':
+        case 'Z':
           e.preventDefault();
-          undo();
+          if (e.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
           break;
         case 'c':
           e.preventDefault();
@@ -305,5 +310,5 @@ export default function useKeyboard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen]);
 }
