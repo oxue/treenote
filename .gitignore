@@ -5,6 +5,5 @@ dist/
 .env.local
 .vercel/
 .vercel
-screenshots/
 release/
 test-results/
