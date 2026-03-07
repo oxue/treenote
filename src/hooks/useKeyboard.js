@@ -189,6 +189,7 @@ export default function useKeyboard({
           e.preventDefault();
           if (isMeta) {
             applyAction(insertSiblingAbove(tree, path, selectedIndex));
+            setMode('edit');
           } else if (e.altKey) {
             const result = moveToSibling(tree, path, selectedIndex, -1);
             if (result) applyAction(result);
@@ -211,6 +212,7 @@ export default function useKeyboard({
           e.preventDefault();
           if (isMeta) {
             applyAction(insertSiblingBelow(tree, path, selectedIndex));
+            setMode('edit');
           } else if (e.altKey) {
             const result = moveToSibling(tree, path, selectedIndex, 1);
             if (result) applyAction(result);
@@ -226,7 +228,7 @@ export default function useKeyboard({
           e.preventDefault();
           if (isMeta) {
             const result = insertChild(tree, path, selectedIndex);
-            if (result) applyAction(result);
+            if (result) { applyAction(result); setMode('edit'); }
           } else {
             const selected = nodes[selectedIndex];
             if (selected && selected.children.length > 0) {
@@ -239,7 +241,7 @@ export default function useKeyboard({
           e.preventDefault();
           if (isMeta) {
             const result = insertParent(tree, path, selectedIndex);
-            if (result) applyAction(result);
+            if (result) { applyAction(result); setMode('edit'); }
           } else if (e.altKey) {
             const result = moveToParentLevel(tree, path, selectedIndex);
             if (result) applyAction(result);
