@@ -1,17 +1,5 @@
+import { findNodeById } from '../actions';
 import './QueueBar.css';
-
-function resolveNodeFromTree(tree, path, index) {
-  if (!tree) return null;
-  try {
-    let nodes = tree;
-    for (const idx of path) {
-      nodes = nodes[idx].children;
-    }
-    return nodes[index] || null;
-  } catch {
-    return null;
-  }
-}
 
 export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
   return (
@@ -23,7 +11,8 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
             {queue.map((item, i) => {
               const isSelected = focus === 'queue' && i === queueIndex;
               const isEditing = isSelected && mode === 'edit';
-              const treeNode = item.type === 'ref' ? resolveNodeFromTree(tree, item.path, item.index) : null;
+              const resolved = item.type === 'ref' && item.nodeId && tree ? findNodeById(tree, item.nodeId) : null;
+              const treeNode = resolved ? resolved.node : null;
               const displayText = treeNode ? treeNode.text : item.text;
               const displayChecked = treeNode ? treeNode.checked : item.checked;
               return (

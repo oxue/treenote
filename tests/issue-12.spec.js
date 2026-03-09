@@ -194,3 +194,46 @@ test('issue 12: editing queue ref item updates the tree node', async ({ page }) 
   const firstNode = page.locator('.node-box').first();
   await expect(firstNode).toContainText('Edited from queue');
 });
+
+test('issue 12: queue ref survives tree reordering (ID-based refs)', async ({ page }) => {
+  await setupMocks(page);
+  await page.goto('http://localhost:5173');
+
+  await page.waitForSelector('.app', { timeout: 10000 });
+  await page.waitForSelector('.node-box', { timeout: 10000 });
+  await pause(500);
+
+  // Navigate into children (3 items: "Use arrow keys...", "Press Enter...", "Press Cmd+Down...")
+  await page.keyboard.press('ArrowRight');
+  await pause(800);
+
+  // Add the second child ("Press Enter to edit") to queue
+  await page.keyboard.press('ArrowDown');
+  await pause(200);
+  await page.keyboard.press('q');
+  await pause(300);
+
+  // Verify queue shows the correct item
+  const queueItem = page.locator('.queue-box').first();
+  await expect(queueItem).toContainText('Press Enter to edit');
+
+  // Now go back to the first child and check it off (moves it to end, shifting indices)
+  await page.keyboard.press('ArrowUp');
+  await pause(200);
+  await page.keyboard.press('c');
+  await pause(300);
+
+  // The queue item should STILL show "Press Enter to edit" (not the shifted node)
+  // because we use ID-based refs, not positional indices
+  await expect(queueItem).toContainText('Press Enter to edit');
+
+  // Navigate to queue and press 'q' to jump to the ref'd node in tree
+  await page.keyboard.press('ArrowUp');
+  await pause(300);
+  await page.keyboard.press('q');
+  await pause(300);
+
+  // The selected node should be "Press Enter to edit"
+  const selectedNode = page.locator('.node-box.selected');
+  await expect(selectedNode).toContainText('Press Enter to edit');
+});
