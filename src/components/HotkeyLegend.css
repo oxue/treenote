@@ -7,9 +7,9 @@
   border: 1px solid #0f3460;
   border-radius: 8px;
   padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 6px 18px;
   z-index: 100;
   opacity: 0.75;
   transition: opacity 0.2s;
