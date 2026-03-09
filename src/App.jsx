@@ -326,7 +326,11 @@ export default function App({ session }) {
       if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box')) {
         if (queueEditRef.current) {
           const newText = queueEditRef.current.value.trim();
+          const item = queue[queueIndex];
           setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, text: newText } : it));
+          if (item && item.type === 'ref') {
+            applyAction(editNodeText(tree, item.path, item.index, newText));
+          }
         }
         setMode('visual');
       } else if (mode === 'edit' && focus === 'graph' && !e.target.closest('.node-box')) {
@@ -412,8 +416,15 @@ export default function App({ session }) {
         mode={mode}
         ejecting={ejecting}
         queueEditRef={queueEditRef}
+        tree={tree}
         onSelectItem={(i) => { setFocus('queue'); setQueueIndex(i); }}
-        onUpdateText={(i, text) => setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it))}
+        onUpdateText={(i, text) => {
+          const item = queue[i];
+          setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it));
+          if (item.type === 'ref') {
+            applyAction(editNodeText(tree, item.path, item.index, text));
+          }
+        }}
         onExitEdit={() => setMode('visual')}
       />
 

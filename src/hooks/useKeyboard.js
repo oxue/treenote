@@ -155,9 +155,18 @@ export default function useKeyboard({
           case 'c':
             e.preventDefault();
             if (queue[queueIndex]) {
-              if (queue[queueIndex].checked) {
+              const item = queue[queueIndex];
+              if (item.checked) {
                 setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, checked: false } : it));
+                // Sync uncheck to tree for ref items
+                if (item.type === 'ref') {
+                  applyAction(toggleChecked(tree, item.path, item.index));
+                }
               } else {
+                // Sync check to tree for ref items
+                if (item.type === 'ref') {
+                  applyAction(toggleChecked(tree, item.path, item.index));
+                }
                 ejectQueueItem(queueIndex);
               }
             }
@@ -175,7 +184,7 @@ export default function useKeyboard({
             break;
           case 'Enter':
             e.preventDefault();
-            if (queue[queueIndex] && queue[queueIndex].type === 'temp') {
+            if (queue[queueIndex]) {
               setMode('edit');
             }
             break;

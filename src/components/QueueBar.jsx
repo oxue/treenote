@@ -1,6 +1,19 @@
 import './QueueBar.css';
 
-export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, onSelectItem, onUpdateText, onExitEdit }) {
+function resolveNodeFromTree(tree, path, index) {
+  if (!tree) return null;
+  try {
+    let nodes = tree;
+    for (const idx of path) {
+      nodes = nodes[idx].children;
+    }
+    return nodes[index] || null;
+  } catch {
+    return null;
+  }
+}
+
+export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
   return (
     <>
       {queue.length > 0 && (
@@ -9,18 +22,21 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
           <div className="queue-items">
             {queue.map((item, i) => {
               const isSelected = focus === 'queue' && i === queueIndex;
-              const isEditing = isSelected && mode === 'edit' && item.type === 'temp';
+              const isEditing = isSelected && mode === 'edit';
+              const treeNode = item.type === 'ref' ? resolveNodeFromTree(tree, item.path, item.index) : null;
+              const displayText = treeNode ? treeNode.text : item.text;
+              const displayChecked = treeNode ? treeNode.checked : item.checked;
               return (
                 <div
                   key={i}
-                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${item.checked ? 'checked' : ''}`}
+                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
                   onClick={() => onSelectItem(i)}
                 >
                   {isEditing ? (
                     <textarea
                       ref={queueEditRef}
                       className="queue-text-input"
-                      defaultValue={item.text}
+                      defaultValue={displayText}
                       rows={1}
                       autoFocus
                       onInput={(e) => {
@@ -43,7 +59,7 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
                     />
                   ) : (
                     <span className="queue-text">
-                      {item.text || (item.type === 'temp' ? '...' : '')}
+                      {displayText || (item.type === 'temp' ? '...' : '')}
                     </span>
                   )}
                 </div>
