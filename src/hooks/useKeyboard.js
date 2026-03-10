@@ -24,6 +24,7 @@ export default function useKeyboard({
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
   onSave, setBackupOpen,
+  conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -42,6 +43,15 @@ export default function useKeyboard({
       }
 
       if (mode === 'edit') return;
+
+      // Conflict modal — 1/2/3 to resolve
+      if (conflict) {
+        e.preventDefault();
+        if (e.key === '1') onConflictKeepMine();
+        else if (e.key === '2') onConflictKeepTheirs();
+        else if (e.key === '3') onConflictKeepBoth();
+        return;
+      }
 
       // Settings / backup modal — Escape closes it
       if (settingsOpen) {
@@ -330,5 +340,5 @@ export default function useKeyboard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth]);
 }

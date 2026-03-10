@@ -3,26 +3,57 @@ import { supabase } from './supabaseClient';
 export async function loadUserTree(userId) {
   const { data, error } = await supabase
     .from('user_trees')
-    .select('tree_data')
+    .select('tree_data, version')
     .eq('user_id', userId)
     .single();
 
   if (error && error.code === 'PGRST116') {
     // No row found — new user
-    return null;
+    return { tree: null, version: 0 };
   }
   if (error) throw error;
-  return data.tree_data;
+  return { tree: data.tree_data, version: data.version || 1 };
 }
 
-export async function saveUserTree(userId, tree) {
-  const { error } = await supabase
+// Returns { success, version, serverTree } — success=false means conflict
+export async function saveUserTree(userId, tree, expectedVersion) {
+  if (expectedVersion === 0) {
+    // First save — insert
+    const { data, error } = await supabase
+      .from('user_trees')
+      .upsert(
+        { user_id: userId, tree_data: tree, version: 1, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+      .select('version')
+      .single();
+    if (error) throw error;
+    return { success: true, version: data.version };
+  }
+
+  // Conditional update — only succeeds if version matches
+  const { data, error } = await supabase
     .from('user_trees')
-    .upsert(
-      { user_id: userId, tree_data: tree, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    );
+    .update({ tree_data: tree, version: expectedVersion + 1, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('version', expectedVersion)
+    .select('version')
+    .maybeSingle();
+
   if (error) throw error;
+
+  if (!data) {
+    // Version mismatch — conflict. Fetch current server state.
+    const { data: current, error: fetchErr } = await supabase
+      .from('user_trees')
+      .select('tree_data, version')
+      .eq('user_id', userId)
+      .single();
+    if (fetchErr) throw fetchErr;
+    return { success: false, version: current.version, serverTree: current.tree_data };
+  }
+
+  return { success: true, version: data.version };
 }
 
 export async function loadUserQueue(userId) {

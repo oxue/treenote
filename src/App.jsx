@@ -14,6 +14,7 @@ import Linkify from './components/Linkify';
 import SettingsModal from './components/SettingsModal';
 import BackupModal from './components/BackupModal';
 import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
+import ConflictModal from './components/ConflictModal';
 import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
 import useEjectAnimation from './hooks/useEjectAnimation';
@@ -45,10 +46,12 @@ export default function App({ session }) {
   const [queueIndex, setQueueIndex] = useState(0);
   const [physics, setPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
   const [focus, setFocus] = useState('graph');
+  const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const editInputRef = useRef(null);
   const queueEditRef = useRef(null);
   const fileInputRef = useRef(null);
   const loadedRef = useRef(false);
+  const versionRef = useRef(0);
 
   const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
@@ -166,15 +169,59 @@ export default function App({ session }) {
   const handleSave = useCallback(() => {
     if (!tree) return;
     if (userId) {
-      saveUserTree(userId, tree).then(() => {
-        setToast('Saved');
-        setTimeout(() => setToast(null), 1000);
+      saveUserTree(userId, tree, versionRef.current).then((result) => {
+        if (result.success) {
+          versionRef.current = result.version;
+          setToast('Saved');
+          setTimeout(() => setToast(null), 1000);
+        } else {
+          setConflict({
+            localTree: tree,
+            serverTree: result.serverTree,
+            serverVersion: result.version,
+          });
+        }
       }).catch(() => {
         setToast('Save failed');
         setTimeout(() => setToast(null), 1000);
       });
     }
   }, [tree, userId]);
+
+  const handleConflictKeepMine = useCallback(() => {
+    if (!conflict) return;
+    saveUserTree(userId, conflict.localTree, conflict.serverVersion).then((result) => {
+      if (result.success) versionRef.current = result.version;
+    }).catch(() => {});
+    setConflict(null);
+  }, [conflict, userId]);
+
+  const handleConflictKeepTheirs = useCallback(() => {
+    if (!conflict) return;
+    ensureIds(conflict.serverTree);
+    setTree(conflict.serverTree);
+    versionRef.current = conflict.serverVersion;
+    setPath([]);
+    setSelectedIndex(0);
+    setUndoStack([]);
+    setRedoStack([]);
+    setConflict(null);
+  }, [conflict]);
+
+  const handleConflictKeepBoth = useCallback(() => {
+    if (!conflict) return;
+    saveBackup(userId, conflict.localTree).catch(() => {});
+    ensureIds(conflict.serverTree);
+    setTree(conflict.serverTree);
+    versionRef.current = conflict.serverVersion;
+    setPath([]);
+    setSelectedIndex(0);
+    setUndoStack([]);
+    setRedoStack([]);
+    setConflict(null);
+    setToast('Your version was saved as a backup. Press B to restore.');
+    setTimeout(() => setToast(null), 5000);
+  }, [conflict, userId]);
 
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
@@ -183,6 +230,7 @@ export default function App({ session }) {
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
+    conflict, onConflictKeepMine: handleConflictKeepMine, onConflictKeepTheirs: handleConflictKeepTheirs, onConflictKeepBoth: handleConflictKeepBoth,
   });
 
   // Scroll selected item into view
@@ -200,7 +248,8 @@ export default function App({ session }) {
     loadedRef.current = false;
     if (userId) {
       // Backup current tree before overwriting with loaded data
-      loadUserTree(userId).then(async (existing) => {
+      loadUserTree(userId).then(async ({ tree: existing, version }) => {
+        versionRef.current = version;
         if (existing) {
           saveBackup(userId, existing).catch(() => {});
         }
@@ -260,12 +309,23 @@ export default function App({ session }) {
     }
   }, [userId]);
 
-  // Auto-save to Supabase when tree changes (debounced)
+  // Auto-save to Supabase when tree changes (debounced, with OCC)
   useEffect(() => {
     if (!userId || !tree || !loadedRef.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveUserTree(userId, tree).catch(() => {
+      saveUserTree(userId, tree, versionRef.current).then((result) => {
+        if (result.success) {
+          versionRef.current = result.version;
+        } else {
+          // Conflict — another tab/device saved first
+          setConflict({
+            localTree: tree,
+            serverTree: result.serverTree,
+            serverVersion: result.version,
+          });
+        }
+      }).catch(() => {
         setToast('Auto-save failed');
         setTimeout(() => setToast(null), 2000);
       });
@@ -368,15 +428,7 @@ export default function App({ session }) {
           </button>
         )}
         {tree && userId && (
-          <button className="load-btn" onClick={() => {
-            saveUserTree(userId, tree).then(() => {
-              setToast('Saved');
-              setTimeout(() => setToast(null), 1000);
-            }).catch(() => {
-              setToast('Save failed');
-              setTimeout(() => setToast(null), 1000);
-            });
-          }}>
+          <button className="load-btn" onClick={handleSave}>
             Save
           </button>
         )}
@@ -640,6 +692,13 @@ export default function App({ session }) {
             setSelectedIndex(0);
             setUndoStack([]);
           }}
+        />
+      )}
+      {conflict && (
+        <ConflictModal
+          onKeepMine={handleConflictKeepMine}
+          onKeepTheirs={handleConflictKeepTheirs}
+          onKeepBoth={handleConflictKeepBoth}
         />
       )}
       <HotkeyLegend mode={mode} />
