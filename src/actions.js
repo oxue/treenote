@@ -1,6 +1,11 @@
 // Tree action helpers
 // Each action takes the current tree + location, returns { tree, path, selectedIndex }
 
+let _idCounter = 0;
+function generateId() {
+  return Date.now().toString(36) + '-' + (++_idCounter).toString(36);
+}
+
 function cloneTree(tree) {
   return JSON.parse(JSON.stringify(tree));
 }
@@ -18,7 +23,31 @@ function getNodeAt(tree, path, index) {
 }
 
 function newNode(text = '') {
-  return { text, checked: false, children: [] };
+  return { text, checked: false, children: [], id: generateId() };
+}
+
+// Add IDs to any nodes that don't have one (migration for existing data)
+function ensureIds(nodes) {
+  if (!nodes) return;
+  for (const node of nodes) {
+    if (!node.id) node.id = generateId();
+    ensureIds(node.children);
+  }
+}
+
+// Find a node by ID anywhere in the tree. Returns { node, path, index } or null.
+function findNodeById(tree, nodeId) {
+  function search(nodes, currentPath) {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === nodeId) {
+        return { node: nodes[i], path: currentPath, index: i };
+      }
+      const found = search(nodes[i].children, [...currentPath, i]);
+      if (found) return found;
+    }
+    return null;
+  }
+  return search(tree, []);
 }
 
 // Edit the text of the selected node
@@ -234,4 +263,4 @@ export function toggleMarkdown(tree, path, selectedIndex) {
   return { tree: newTree, path, selectedIndex };
 }
 
-export { cloneTree, getNodeAt, getNodesAt };
+export { cloneTree, getNodeAt, getNodesAt, ensureIds, findNodeById };

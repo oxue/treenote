@@ -1,6 +1,7 @@
+import { findNodeById } from '../actions';
 import './QueueBar.css';
 
-export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, onSelectItem, onUpdateText, onExitEdit }) {
+export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
   return (
     <>
       {queue.length > 0 && (
@@ -9,18 +10,22 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
           <div className="queue-items">
             {queue.map((item, i) => {
               const isSelected = focus === 'queue' && i === queueIndex;
-              const isEditing = isSelected && mode === 'edit' && item.type === 'temp';
+              const isEditing = isSelected && mode === 'edit';
+              const resolved = item.type === 'ref' && item.nodeId && tree ? findNodeById(tree, item.nodeId) : null;
+              const treeNode = resolved ? resolved.node : null;
+              const displayText = treeNode ? treeNode.text : item.text;
+              const displayChecked = treeNode ? treeNode.checked : item.checked;
               return (
                 <div
                   key={i}
-                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${item.checked ? 'checked' : ''}`}
+                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
                   onClick={() => onSelectItem(i)}
                 >
                   {isEditing ? (
                     <textarea
                       ref={queueEditRef}
                       className="queue-text-input"
-                      defaultValue={item.text}
+                      defaultValue={displayText}
                       rows={1}
                       autoFocus
                       onInput={(e) => {
@@ -43,7 +48,7 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
                     />
                   ) : (
                     <span className="queue-text">
-                      {item.text || (item.type === 'temp' ? '...' : '')}
+                      {displayText || (item.type === 'temp' ? '...' : '')}
                     </span>
                   )}
                 </div>

@@ -14,6 +14,7 @@ import {
   moveToParentLevel,
   moveToSibling,
   toggleMarkdown,
+  findNodeById,
 } from '../actions';
 
 export default function useKeyboard({
@@ -155,9 +156,20 @@ export default function useKeyboard({
           case 'c':
             e.preventDefault();
             if (queue[queueIndex]) {
-              if (queue[queueIndex].checked) {
+              const item = queue[queueIndex];
+              if (item.checked) {
                 setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, checked: false } : it));
+                // Sync uncheck to tree for ref items
+                if (item.type === 'ref' && item.nodeId) {
+                  const found = findNodeById(tree, item.nodeId);
+                  if (found) applyAction(toggleChecked(tree, found.path, found.index));
+                }
               } else {
+                // Sync check to tree for ref items
+                if (item.type === 'ref' && item.nodeId) {
+                  const found = findNodeById(tree, item.nodeId);
+                  if (found) applyAction(toggleChecked(tree, found.path, found.index));
+                }
                 ejectQueueItem(queueIndex);
               }
             }
@@ -175,17 +187,19 @@ export default function useKeyboard({
             break;
           case 'Enter':
             e.preventDefault();
-            if (queue[queueIndex] && queue[queueIndex].type === 'temp') {
+            if (queue[queueIndex]) {
               setMode('edit');
             }
             break;
           case 'q':
             e.preventDefault();
-            if (queue[queueIndex] && queue[queueIndex].type === 'ref') {
-              const item = queue[queueIndex];
-              setPath(item.path);
-              setSelectedIndex(item.index);
-              setFocus('graph');
+            if (queue[queueIndex] && queue[queueIndex].type === 'ref' && queue[queueIndex].nodeId) {
+              const found = findNodeById(tree, queue[queueIndex].nodeId);
+              if (found) {
+                setPath(found.path);
+                setSelectedIndex(found.index);
+                setFocus('graph');
+              }
             }
             break;
         }
@@ -295,8 +309,7 @@ export default function useKeyboard({
           if (selectedNode) {
             setQueue(q => [...q, {
               type: 'ref',
-              path: [...path],
-              index: selectedIndex,
+              nodeId: selectedNode.id,
               text: selectedNode.text,
               checked: selectedNode.checked || false,
             }]);

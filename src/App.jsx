@@ -6,6 +6,8 @@ import {
   deleteNodeWithChildren,
   deleteNodeKeepChildren,
   deleteCheckedNodes,
+  ensureIds,
+  findNodeById,
 } from './actions';
 import ChildCount from './components/ChildCount';
 import Linkify from './components/Linkify';
@@ -204,6 +206,7 @@ export default function App({ session }) {
         }
         const data = existing;
         if (data) {
+          ensureIds(data);
           setTree(data);
           setPath([]);
           setSelectedIndex(0);
@@ -212,25 +215,30 @@ export default function App({ session }) {
           const content = await window.treenote.getDefaultFile();
           if (content) {
             const parsed = parseTree(content);
+            ensureIds(parsed);
             setTree(parsed);
             setPath([]);
             setSelectedIndex(0);
             // Save local data to cloud
             saveUserTree(userId, parsed).catch(() => {});
           } else {
-            setTree([{ text: 'Welcome to Treenote', checked: false, children: [
+            const defaultTree = [{ text: 'Welcome to Treenote', checked: false, children: [
               { text: 'Use arrow keys to navigate', checked: false, children: [] },
               { text: 'Press Enter to edit', checked: false, children: [] },
               { text: 'Press Cmd+Down to add items', checked: false, children: [] },
-            ]}]);
+            ]}];
+            ensureIds(defaultTree);
+            setTree(defaultTree);
           }
         } else {
           // New cloud user on web — default tree
-          setTree([{ text: 'Welcome to Treenote', checked: false, children: [
+          const defaultTree = [{ text: 'Welcome to Treenote', checked: false, children: [
             { text: 'Use arrow keys to navigate', checked: false, children: [] },
             { text: 'Press Enter to edit', checked: false, children: [] },
             { text: 'Press Cmd+Down to add items', checked: false, children: [] },
-          ]}]);
+          ]}];
+          ensureIds(defaultTree);
+          setTree(defaultTree);
         }
         loadedRef.current = true;
       }).catch(() => {
@@ -296,6 +304,7 @@ export default function App({ session }) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const parsed = parseTree(ev.target.result);
+      ensureIds(parsed);
       setTree(parsed);
       setPath([]);
       setSelectedIndex(0);
@@ -326,7 +335,12 @@ export default function App({ session }) {
       if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box')) {
         if (queueEditRef.current) {
           const newText = queueEditRef.current.value.trim();
+          const item = queue[queueIndex];
           setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, text: newText } : it));
+          if (item && item.type === 'ref' && item.nodeId) {
+            const found = findNodeById(tree, item.nodeId);
+            if (found) applyAction(editNodeText(tree, found.path, found.index, newText));
+          }
         }
         setMode('visual');
       } else if (mode === 'edit' && focus === 'graph' && !e.target.closest('.node-box')) {
@@ -412,8 +426,16 @@ export default function App({ session }) {
         mode={mode}
         ejecting={ejecting}
         queueEditRef={queueEditRef}
+        tree={tree}
         onSelectItem={(i) => { setFocus('queue'); setQueueIndex(i); }}
-        onUpdateText={(i, text) => setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it))}
+        onUpdateText={(i, text) => {
+          const item = queue[i];
+          setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it));
+          if (item.type === 'ref' && item.nodeId) {
+            const found = findNodeById(tree, item.nodeId);
+            if (found) applyAction(editNodeText(tree, found.path, found.index, text));
+          }
+        }}
         onExitEdit={() => setMode('visual')}
       />
 
@@ -593,7 +615,9 @@ export default function App({ session }) {
                 setTimeout(() => setToast(null), 1000);
                 window.treenote.getDefaultFile().then((content) => {
                   if (content) {
-                    setTree(parseTree(content));
+                    const parsed = parseTree(content);
+                    ensureIds(parsed);
+                    setTree(parsed);
                     setPath([]);
                     setSelectedIndex(0);
                     setUndoStack([]);
@@ -610,6 +634,7 @@ export default function App({ session }) {
           userId={userId}
           onClose={() => setBackupOpen(false)}
           onRestore={(treeData) => {
+            ensureIds(treeData);
             setTree(treeData);
             setPath([]);
             setSelectedIndex(0);
