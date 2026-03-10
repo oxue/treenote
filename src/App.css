@@ -202,6 +202,7 @@ body {
 }
 
 /* Markdown rendered content */
+.node-markdown { white-space: normal; }
 .node-markdown p { margin: 0 0 0.5em; }
 .node-markdown p:last-child { margin-bottom: 0; }
 .node-markdown h1, .node-markdown h2, .node-markdown h3 { margin: 0 0 0.3em; color: #e94560; }
