@@ -25,6 +25,7 @@ export default function useKeyboard({
   setFocus, setSelectedIndex, setPath, setMode,
   onSave, setBackupOpen,
   conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth,
+  calendarOpen, setCalendarOpen,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -43,6 +44,9 @@ export default function useKeyboard({
       }
 
       if (mode === 'edit') return;
+
+      // Metadata panel is open — let the component handle keys
+      if (calendarOpen) return;
 
       // Conflict modal — 1/2/3 to resolve
       if (conflict) {
@@ -335,10 +339,16 @@ export default function useKeyboard({
           e.preventDefault();
           setBackupOpen(true);
           break;
+        case 'd':
+          e.preventDefault();
+          if (selectedNode) {
+            setCalendarOpen(true);
+          }
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen]);
 }
