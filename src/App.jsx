@@ -17,6 +17,8 @@ import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModal
 import ConflictModal from './components/ConflictModal';
 import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
+import DeadlineBadge from './components/DeadlineBadge';
+import MetadataPanel from './components/MetadataPanel';
 import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
@@ -25,6 +27,7 @@ import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, d
 import { supabase } from './supabaseClient';
 import { marked } from 'marked';
 import './App.css';
+import './components/deadline.css';
 
 marked.setOptions({ breaks: true });
 
@@ -47,7 +50,9 @@ export default function App({ session }) {
   const [physics, setPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
   const [focus, setFocus] = useState('graph');
   const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const editInputRef = useRef(null);
+  const selectedNodeRef = useRef(null);
   const queueEditRef = useRef(null);
   const fileInputRef = useRef(null);
   const loadedRef = useRef(false);
@@ -223,6 +228,28 @@ export default function App({ session }) {
     setTimeout(() => setToast(null), 5000);
   }, [conflict, userId]);
 
+  const setNodeDeadline = useCallback((dateStr) => {
+    if (!tree || !selectedNode) return;
+    const newTree = cloneTree(tree);
+    let nodes = newTree;
+    for (const idx of path) nodes = nodes[idx].children;
+    nodes[selectedIndex].deadline = dateStr;
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack([]);
+    setTree(newTree);
+  }, [tree, path, selectedIndex, selectedNode]);
+
+  const setNodePriority = useCallback((priority) => {
+    if (!tree || !selectedNode) return;
+    const newTree = cloneTree(tree);
+    let nodes = newTree;
+    for (const idx of path) nodes = nodes[idx].children;
+    nodes[selectedIndex].priority = priority;
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack([]);
+    setTree(newTree);
+  }, [tree, path, selectedIndex, selectedNode]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
@@ -231,6 +258,7 @@ export default function App({ session }) {
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
     conflict, onConflictKeepMine: handleConflictKeepMine, onConflictKeepTheirs: handleConflictKeepTheirs, onConflictKeepBoth: handleConflictKeepBoth,
+    calendarOpen, setCalendarOpen,
   });
 
   // Scroll selected item into view
@@ -547,6 +575,7 @@ export default function App({ session }) {
                 return (
                   <div
                     key={i}
+                    ref={isSelected ? selectedNodeRef : undefined}
                     className={`node-box ${isSelected && !isEditing ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${node.checked ? 'checked' : ''}`}
                     onClick={() => handleNodeClick(i)}
                     onDoubleClick={() => {
@@ -587,6 +616,8 @@ export default function App({ session }) {
                       <span className="node-text"><Linkify text={node.text} /></span>
                     )}
                     <div className="node-meta">
+                      <DeadlineBadge deadline={node.deadline} />
+                      {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
                       {node.markdown && <span className="markdown-badge">MD</span>}
                       {node.checked && <span>&#10003;</span>}
                       {node.children.length > 0 && (
@@ -699,6 +730,14 @@ export default function App({ session }) {
           onKeepMine={handleConflictKeepMine}
           onKeepTheirs={handleConflictKeepTheirs}
           onKeepBoth={handleConflictKeepBoth}
+        />
+      )}
+      {calendarOpen && selectedNode && (
+        <MetadataPanel
+          node={selectedNode}
+          onSetDeadline={(dateStr) => setNodeDeadline(dateStr)}
+          onSetPriority={(priority) => setNodePriority(priority)}
+          onClose={() => setCalendarOpen(false)}
         />
       )}
       <HotkeyLegend mode={mode} />

@@ -67,6 +67,10 @@ export default function HotkeyLegend({ mode }) {
             <span className="legend-desc">Add to queue</span>
           </div>
           <div className="legend-row">
+            <kbd>d</kbd>
+            <span className="legend-desc">Deadline / metadata</span>
+          </div>
+          <div className="legend-row">
             <span className="legend-keys arrow-keys">
               <kbd>&#8984;</kbd>
               <span className="legend-plus">+</span>
