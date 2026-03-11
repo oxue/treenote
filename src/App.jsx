@@ -25,6 +25,7 @@ import useSvgLines from './hooks/useSvgLines';
 import useKeyboard from './hooks/useKeyboard';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
+import { getGoogleToken, syncTreeToCalendar } from './calendarSync';
 import { marked } from 'marked';
 import './App.css';
 import './components/deadline.css';
@@ -51,6 +52,7 @@ export default function App({ session }) {
   const [focus, setFocus] = useState('graph');
   const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [googleToken, setGoogleToken] = useState(null);
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
   const queueEditRef = useRef(null);
@@ -155,6 +157,20 @@ export default function App({ session }) {
     setSelectedIndex(next.selectedIndex);
   }, [redoStack, tree, path, selectedIndex]);
 
+  // Capture Google provider token from session (available after OAuth redirect)
+  useEffect(() => {
+    const token = getGoogleToken(session);
+    if (token) {
+      setGoogleToken(token);
+      // Persist in sessionStorage so it survives page navigation within the session
+      sessionStorage.setItem('google_provider_token', token);
+    } else {
+      // Try to recover from sessionStorage
+      const stored = sessionStorage.getItem('google_provider_token');
+      if (stored) setGoogleToken(stored);
+    }
+  }, [session]);
+
   // Focus textarea when entering edit mode
   useEffect(() => {
     if (mode === 'edit' && focus === 'graph' && editInputRef.current) {
@@ -250,6 +266,23 @@ export default function App({ session }) {
     setTree(newTree);
   }, [tree, path, selectedIndex, selectedNode]);
 
+  const toggleNodeCalendarSync = useCallback(() => {
+    if (!tree || !selectedNode) return;
+    const newTree = cloneTree(tree);
+    let nodes = newTree;
+    for (const idx of path) nodes = nodes[idx].children;
+    const node = nodes[selectedIndex];
+    if (node.calendarSync) {
+      delete node.calendarSync;
+      // Keep calendarEventId so we could clean up later, but stop syncing
+    } else {
+      node.calendarSync = true;
+    }
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack([]);
+    setTree(newTree);
+  }, [tree, path, selectedIndex, selectedNode]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
@@ -338,10 +371,27 @@ export default function App({ session }) {
   }, [userId]);
 
   // Auto-save to Supabase when tree changes (debounced, with OCC)
+  // Also syncs nodes with calendarSync: true to Google Calendar
   useEffect(() => {
     if (!userId || !tree || !loadedRef.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
+    saveTimeoutRef.current = setTimeout(async () => {
+      // Sync to Google Calendar before saving (mutates tree nodes with event IDs)
+      if (googleToken) {
+        try {
+          const treeForSync = cloneTree(tree);
+          const modified = await syncTreeToCalendar(treeForSync, googleToken);
+          if (modified) {
+            // Tree was modified (new event IDs added) — save the updated version
+            setTree(treeForSync);
+            // The setTree will trigger this effect again, which will save to Supabase
+            return;
+          }
+        } catch {
+          // Calendar sync failed silently — continue with normal save
+        }
+      }
+
       saveUserTree(userId, tree, versionRef.current).then((result) => {
         if (result.success) {
           versionRef.current = result.version;
@@ -361,7 +411,7 @@ export default function App({ session }) {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [tree, userId]);
+  }, [tree, userId, googleToken]);
 
   // Auto-save queue to Supabase when queue changes (debounced)
   useEffect(() => {
@@ -616,7 +666,7 @@ export default function App({ session }) {
                       <span className="node-text"><Linkify text={node.text} /></span>
                     )}
                     <div className="node-meta">
-                      <DeadlineBadge deadline={node.deadline} />
+                      <DeadlineBadge deadline={node.deadline} calendarSync={node.calendarSync} />
                       {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
                       {node.markdown && <span className="markdown-badge">MD</span>}
                       {node.checked && <span>&#10003;</span>}
@@ -737,6 +787,8 @@ export default function App({ session }) {
           node={selectedNode}
           onSetDeadline={(dateStr) => setNodeDeadline(dateStr)}
           onSetPriority={(priority) => setNodePriority(priority)}
+          onToggleCalendarSync={toggleNodeCalendarSync}
+          hasGoogleToken={!!googleToken}
           onClose={() => setCalendarOpen(false)}
         />
       )}

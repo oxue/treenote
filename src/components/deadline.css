@@ -282,3 +282,58 @@
 .priority-value.medium { background: #4a3a1a; color: #fbbf24; }
 .priority-value.high { background: #4a2a1a; color: #fb923c; }
 .priority-value.urgent { background: #4a1a2a; color: #f87171; }
+
+/* ===== Calendar Sync ===== */
+.cal-sync-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4285f4;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.cal-sync-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #888;
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  transition: all 0.15s;
+}
+
+.cal-sync-toggle:hover {
+  background: #1a2a4e;
+  color: #aaa;
+}
+
+.cal-sync-toggle.active {
+  color: #4285f4;
+  border-color: #4285f4;
+  background: #0f1a3e;
+}
+
+.cal-sync-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.cal-sync-status {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #555;
+  font-family: monospace;
+}
+
+.cal-sync-hint {
+  font-size: 12px;
+  color: #555;
+  padding: 8px 0;
+}

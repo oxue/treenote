@@ -12,7 +12,7 @@ function getFirstDayOfWeek(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
-export default function MetadataPanel({ node, onSetDeadline, onSetPriority, onClose }) {
+export default function MetadataPanel({ node, onSetDeadline, onSetPriority, onToggleCalendarSync, hasGoogleToken, onClose }) {
   const today = new Date();
   const initial = node?.deadline ? new Date(node.deadline) : today;
 
@@ -206,6 +206,31 @@ export default function MetadataPanel({ node, onSetDeadline, onSetPriority, onCl
           <kbd>&uarr;</kbd><kbd>&darr;</kbd> select &nbsp; <kbd>Enter</kbd> set
         </div>
       </div>
+
+      {hasGoogleToken && node?.deadline && (
+        <div className="meta-field">
+          <div className="meta-field-label">Google Calendar</div>
+          <div
+            className={`cal-sync-toggle ${node?.calendarSync ? 'active' : ''}`}
+            onClick={onToggleCalendarSync}
+          >
+            <span className="cal-sync-icon">{node?.calendarSync ? '\u2713' : '\u25CB'}</span>
+            <span>{node?.calendarSync ? 'Synced to Google Calendar' : 'Sync to Google Calendar'}</span>
+          </div>
+          {node?.calendarEventId && (
+            <div className="cal-sync-status">Event ID: {node.calendarEventId.slice(0, 12)}...</div>
+          )}
+        </div>
+      )}
+
+      {!hasGoogleToken && (
+        <div className="meta-field">
+          <div className="meta-field-label">Google Calendar</div>
+          <div className="cal-sync-hint">
+            Sign in with Google to enable calendar sync
+          </div>
+        </div>
+      )}
     </div>
   );
 }
