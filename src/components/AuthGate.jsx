@@ -41,6 +41,8 @@ function LoginPage({ error, setError }) {
       provider,
       options: {
         redirectTo: window.location.origin,
+        scopes: provider === 'google' ? 'https://www.googleapis.com/auth/calendar.events' : undefined,
+        queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'consent' } : undefined,
       },
     });
     if (error) {

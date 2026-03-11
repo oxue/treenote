@@ -1,4 +1,4 @@
-export default function DeadlineBadge({ deadline }) {
+export default function DeadlineBadge({ deadline, calendarSync }) {
   if (!deadline) return null;
 
   const date = new Date(deadline);
@@ -22,5 +22,10 @@ export default function DeadlineBadge({ deadline }) {
   else if (diffDays === 1) label = 'Tomorrow';
   else if (diffDays === -1) label = 'Yesterday';
 
-  return <span className={className}>{label}</span>;
+  return (
+    <span className={className}>
+      {calendarSync && <span className="cal-sync-dot" title="Synced to Google Calendar" />}
+      {label}
+    </span>
+  );
 }
