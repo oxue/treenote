@@ -19,6 +19,8 @@ import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
 import DeadlineBadge from './components/DeadlineBadge';
 import MetadataPanel from './components/MetadataPanel';
+import EmojiPicker from './components/EmojiPicker';
+import { emojis as emojiList } from './emojiData';
 import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
@@ -51,6 +53,7 @@ export default function App({ session }) {
   const [focus, setFocus] = useState('graph');
   const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [emojiPicker, setEmojiPicker] = useState({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
   const queueEditRef = useRef(null);
@@ -134,6 +137,44 @@ export default function App({ session }) {
     applyAction(result);
     exitEditMode();
   }, [tree, path, selectedIndex, selectedNode, applyAction, exitEditMode]);
+
+  // Emoji picker helpers
+  const getEmojiQuery = useCallback((textarea) => {
+    const text = textarea.value;
+    const cursor = textarea.selectionStart;
+    const before = text.slice(0, cursor);
+    const match = before.match(/:([a-zA-Z0-9_]*)$/);
+    return match ? match[1] : null;
+  }, []);
+
+  const updateEmojiPicker = useCallback((textarea) => {
+    const query = getEmojiQuery(textarea);
+    if (query !== null) {
+      const rect = textarea.getBoundingClientRect();
+      setEmojiPicker(prev => ({
+        visible: true,
+        query,
+        position: { top: rect.bottom + 4, left: rect.left },
+        selectedIdx: query !== prev.query ? 0 : prev.selectedIdx,
+      }));
+    } else {
+      setEmojiPicker(prev => prev.visible ? { ...prev, visible: false } : prev);
+    }
+  }, [getEmojiQuery]);
+
+  const insertEmoji = useCallback((textarea, emoji) => {
+    const text = textarea.value;
+    const cursor = textarea.selectionStart;
+    const before = text.slice(0, cursor);
+    const colonIdx = before.lastIndexOf(':');
+    const after = text.slice(cursor);
+    const newText = before.slice(0, colonIdx) + emoji + after;
+    textarea.value = newText;
+    const newCursor = colonIdx + emoji.length;
+    textarea.selectionStart = newCursor;
+    textarea.selectionEnd = newCursor;
+    setEmojiPicker({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
+  }, []);
 
   const undo = useCallback(() => {
     if (undoStack.length === 0) return;
@@ -597,6 +638,35 @@ export default function App({ session }) {
                           e.target.style.height = e.target.scrollHeight + 'px';
                         }}
                         onKeyDown={(e) => {
+                          if (emojiPicker.visible) {
+                            const filtered = emojiList.filter(em => em.shortcode.includes(emojiPicker.query.toLowerCase())).slice(0, 8);
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              setEmojiPicker(prev => ({ ...prev, selectedIdx: Math.min(prev.selectedIdx + 1, filtered.length - 1) }));
+                              e.stopPropagation();
+                              return;
+                            }
+                            if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              setEmojiPicker(prev => ({ ...prev, selectedIdx: Math.max(prev.selectedIdx - 1, 0) }));
+                              e.stopPropagation();
+                              return;
+                            }
+                            if (e.key === 'Enter' || e.key === 'Tab') {
+                              if (filtered.length > 0) {
+                                e.preventDefault();
+                                insertEmoji(e.target, filtered[emojiPicker.selectedIdx]?.emoji || filtered[0].emoji);
+                                e.stopPropagation();
+                                return;
+                              }
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              setEmojiPicker(prev => ({ ...prev, visible: false }));
+                              e.stopPropagation();
+                              return;
+                            }
+                          }
                           if (e.key === 'Escape') {
                             e.preventDefault();
                             commitEdit(e.target.value);
@@ -605,6 +675,7 @@ export default function App({ session }) {
                         }}
                         onBlur={(e) => {
                           if (mode === 'edit') {
+                            setEmojiPicker(prev => prev.visible ? { ...prev, visible: false } : prev);
                             commitEdit(e.target.value);
                           }
                         }}
@@ -671,6 +742,18 @@ export default function App({ session }) {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
+      <EmojiPicker
+        query={emojiPicker.query}
+        onSelect={(emoji) => {
+          if (editInputRef.current) {
+            insertEmoji(editInputRef.current, emoji);
+            editInputRef.current.focus();
+          }
+        }}
+        position={emojiPicker.position}
+        visible={emojiPicker.visible}
+        selectedIdx={emojiPicker.selectedIdx}
+      />
       {deleteConfirm && (
         <DeleteConfirmModal
           onDeleteWithChildren={() => { applyAction(deleteNodeWithChildren(tree, path, selectedIndex)); setDeleteConfirm(false); }}
