@@ -7,33 +7,95 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 INTERVAL=600 # 10m
+LOG_FILE="${HOME}/.treenote-autofix.log"
 
 cd "$REPO_ROOT"
 
-echo "Autofix daemon started. Polling every ${INTERVAL}s for issues labeled 'autofix'."
+# Logging helper
+log() {
+  local msg="[$(date '+%Y-%m-%d %H:%M:%S')] [daemon] $*"
+  echo "$msg"
+  echo "$msg" >> "$LOG_FILE"
+}
+
+log "Autofix daemon started. Polling every ${INTERVAL}s for issues labeled 'autofix'."
+
+# --- Recovery: handle issues left in-progress with no running Claude ---
+recover_stale_inprogress() {
+  log "Checking for stale in-progress issues..."
+
+  INPROGRESS=$(gh issue list \
+    --repo oxue/treenote \
+    --state open \
+    --label in-progress \
+    --json number,title,labels \
+    --jq '.[].number' 2>/dev/null || true)
+
+  if [ -z "$INPROGRESS" ]; then
+    return
+  fi
+
+  while IFS= read -r issue_num; do
+    BRANCH="fix/issue-${issue_num}"
+    WORKTREE_PATH="$REPO_ROOT/.claude/worktrees/${BRANCH}"
+
+    # Check if a Claude process is actively handling this issue
+    CLAUDE_RUNNING=$(pgrep -f "fix/issue-${issue_num}" 2>/dev/null | head -1 || true)
+    if [ -n "$CLAUDE_RUNNING" ]; then
+      log "Issue #${issue_num}: Claude is still running (PID ${CLAUDE_RUNNING}), skipping recovery."
+      continue
+    fi
+
+    log "Issue #${issue_num}: marked in-progress but no Claude process found — recovering."
+
+    # If worktree exists with commits, try to create a PR from the existing work
+    if [ -d "$WORKTREE_PATH" ]; then
+      COMMITS_AHEAD=$(cd "$WORKTREE_PATH" && git rev-list --count master..HEAD 2>/dev/null || echo "0")
+      if [ "$COMMITS_AHEAD" -gt 0 ]; then
+        log "Issue #${issue_num}: worktree has ${COMMITS_AHEAD} commit(s) — attempting to create PR."
+        "$REPO_ROOT/scripts/fix-issue.sh" "$issue_num" --pr 2>&1 | tee -a "$LOG_FILE" || {
+          log "Issue #${issue_num}: PR creation failed. Removing in-progress label for retry."
+          gh issue edit "$issue_num" --remove-label "in-progress" --repo oxue/treenote 2>/dev/null || true
+        }
+      else
+        log "Issue #${issue_num}: worktree exists but no commits. Removing in-progress label for retry."
+        gh issue edit "$issue_num" --remove-label "in-progress" --repo oxue/treenote 2>/dev/null || true
+      fi
+    else
+      log "Issue #${issue_num}: no worktree found. Removing in-progress label for retry."
+      gh issue edit "$issue_num" --remove-label "in-progress" --repo oxue/treenote 2>/dev/null || true
+    fi
+  done <<< "$INPROGRESS"
+}
+
+# Run recovery once at startup to handle any issues left over from a previous daemon run
+recover_stale_inprogress
 
 while true; do
-  echo ""
-  echo "=== $(date) — Checking for issues ==="
+  log ""
+  log "=== Checking for issues ==="
 
-  # Get open issues labeled "autofix" that aren't already in-progress or pr-pending
+  # Get open issues labeled "autofix" that aren't already in-progress, pr-pending, or needs-human
   ISSUES=$(gh issue list \
     --repo oxue/treenote \
     --state open \
     --label autofix \
     --json number,title,labels \
-    --jq '.[] | select(.labels | map(.name) | (contains(["in-progress"]) or contains(["pr-pending"])) | not) | .number' 2>/dev/null || true)
+    --jq '.[] | select(.labels | map(.name) | (contains(["in-progress"]) or contains(["pr-pending"]) or contains(["needs-human"])) | not) | .number' 2>/dev/null || true)
 
   if [ -z "$ISSUES" ]; then
-    echo "No new issues to fix."
+    log "No new issues to fix."
   else
     while IFS= read -r issue_num; do
-      echo "--- Processing issue #${issue_num} ---"
-      ./scripts/fix-issue.sh "$issue_num" || echo "Issue #${issue_num} failed, continuing..."
-      echo "--- Done with issue #${issue_num} ---"
+      log "--- Processing issue #${issue_num} ---"
+      "$REPO_ROOT/scripts/fix-issue.sh" "$issue_num" 2>&1 | tee -a "$LOG_FILE" || log "Issue #${issue_num} failed, continuing..."
+      log "--- Done with issue #${issue_num} ---"
     done <<< "$ISSUES"
   fi
 
-  echo "Sleeping ${INTERVAL}s until next poll..."
+  log "Sleeping ${INTERVAL}s until next poll..."
   sleep "$INTERVAL"
+
+  # Run recovery check each cycle too, in case something got stuck mid-cycle
+  recover_stale_inprogress
 done
