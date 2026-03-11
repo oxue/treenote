@@ -1,4 +1,4 @@
-export default function DeadlineBadge({ deadline }) {
+export default function DeadlineBadge({ deadline, deadlineTime, deadlineDuration }) {
   if (!deadline) return null;
 
   const date = new Date(deadline);
@@ -21,6 +21,25 @@ export default function DeadlineBadge({ deadline }) {
   if (diffDays === 0) label = 'Today';
   else if (diffDays === 1) label = 'Tomorrow';
   else if (diffDays === -1) label = 'Yesterday';
+
+  // Append time if set
+  if (deadlineTime) {
+    const [h, m] = deadlineTime.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    label += ` ${h12}:${String(m).padStart(2, '0')} ${period}`;
+  }
+
+  // Append duration if set
+  if (deadlineDuration) {
+    if (deadlineDuration < 60) {
+      label += ` (${deadlineDuration}m)`;
+    } else {
+      const dh = Math.floor(deadlineDuration / 60);
+      const dm = deadlineDuration % 60;
+      label += dm === 0 ? ` (${dh}h)` : ` (${dh}h${dm}m)`;
+    }
+  }
 
   return <span className={className}>{label}</span>;
 }

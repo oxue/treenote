@@ -250,6 +250,28 @@ export default function App({ session }) {
     setTree(newTree);
   }, [tree, path, selectedIndex, selectedNode]);
 
+  const setNodeTime = useCallback((time) => {
+    if (!tree || !selectedNode) return;
+    const newTree = cloneTree(tree);
+    let nodes = newTree;
+    for (const idx of path) nodes = nodes[idx].children;
+    nodes[selectedIndex].deadlineTime = time;
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack([]);
+    setTree(newTree);
+  }, [tree, path, selectedIndex, selectedNode]);
+
+  const setNodeDuration = useCallback((duration) => {
+    if (!tree || !selectedNode) return;
+    const newTree = cloneTree(tree);
+    let nodes = newTree;
+    for (const idx of path) nodes = nodes[idx].children;
+    nodes[selectedIndex].deadlineDuration = duration;
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack([]);
+    setTree(newTree);
+  }, [tree, path, selectedIndex, selectedNode]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
@@ -616,7 +638,7 @@ export default function App({ session }) {
                       <span className="node-text"><Linkify text={node.text} /></span>
                     )}
                     <div className="node-meta">
-                      <DeadlineBadge deadline={node.deadline} />
+                      <DeadlineBadge deadline={node.deadline} deadlineTime={node.deadlineTime} deadlineDuration={node.deadlineDuration} />
                       {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
                       {node.markdown && <span className="markdown-badge">MD</span>}
                       {node.checked && <span>&#10003;</span>}
@@ -737,6 +759,8 @@ export default function App({ session }) {
           node={selectedNode}
           onSetDeadline={(dateStr) => setNodeDeadline(dateStr)}
           onSetPriority={(priority) => setNodePriority(priority)}
+          onSetTime={(time) => setNodeTime(time)}
+          onSetDuration={(duration) => setNodeDuration(duration)}
           onClose={() => setCalendarOpen(false)}
         />
       )}
