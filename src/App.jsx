@@ -641,7 +641,7 @@ export default function App({ session }) {
                         <span className="node-text"><Linkify text={node.text} /></span>
                       )}
                       <div className="node-meta">
-                        {node.checked && <span>&#10003;</span>}
+                        {node.checked && <span className="node-check">&#10003;</span>}
                         <ChildCount children={node.children} />
                       </div>
                     </div>
@@ -760,7 +760,7 @@ export default function App({ session }) {
                       <DeadlineBadge deadline={node.deadline} deadlineTime={node.deadlineTime} deadlineDuration={node.deadlineDuration} />
                       {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
                       {node.markdown && <span className="markdown-badge">MD</span>}
-                      {node.checked && <span>&#10003;</span>}
+                      {node.checked && <span className="node-check">&#10003;</span>}
                       {node.children.length > 0 && (
                         <span className="child-count">{node.children.length}</span>
                       )}
@@ -806,7 +806,7 @@ export default function App({ session }) {
                         <span className="node-text"><Linkify text={child.text} /></span>
                       )}
                       <div className="node-meta">
-                        {child.checked && <span>&#10003;</span>}
+                        {child.checked && <span className="node-check">&#10003;</span>}
                         <ChildCount children={child.children} />
                       </div>
                     </div>
@@ -817,7 +817,7 @@ export default function App({ session }) {
           </div>
         </div>
       )}
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className="toast">{toast === 'Saved' && <span className="toast-check">&#10003;</span>}{toast}</div>}
       <EmojiPicker
         query={emojiPicker.query}
         onSelect={(emoji) => {

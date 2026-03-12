@@ -33,6 +33,18 @@ body {
   flex-direction: column;
   padding: 20px;
   animation: app-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+/* Subtle dot grid background */
+.app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.015) 1px, transparent 0);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: -1;
 }
 
 @keyframes app-enter {
@@ -240,11 +252,19 @@ body {
 
 .node-box.checked {
   opacity: 0.4;
+  transition: opacity 0.3s ease;
 }
 
 .node-box.checked .node-text {
   text-decoration: line-through;
   text-decoration-color: rgba(233, 69, 96, 0.4);
+}
+
+/* Checkmark in meta */
+.node-check {
+  color: #4ade80;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* ===== Node Text ===== */
@@ -533,6 +553,19 @@ kbd {
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-12px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toast-check {
+  display: inline-block;
+  margin-right: 6px;
+  color: #4ade80;
+  animation: toast-check-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toast-check-pop {
+  from { transform: scale(0) rotate(-45deg); opacity: 0; }
+  50% { transform: scale(1.3) rotate(0deg); opacity: 1; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 /* ===== Modals ===== */
