@@ -7,39 +7,29 @@ const DEFAULT_SETTINGS = {
   theme: 'dark',
 };
 
-function loadSettings() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
-    }
-  } catch (e) {
-    // ignore parse errors
-  }
-  return { ...DEFAULT_SETTINGS };
-}
-
-function persistSettings(settings) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch (e) {
-    // ignore write errors
-  }
-}
-
 export default function useSettings() {
-  const [settings, setSettingsState] = useState(loadSettings);
+  const [settings, setSettingsState] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      }
+    } catch (e) {
+      // ignore
+    }
+    return { ...DEFAULT_SETTINGS };
+  });
 
-  // Persist whenever settings change
   useEffect(() => {
-    persistSettings(settings);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch (e) {
+      // ignore
+    }
   }, [settings]);
 
   const updateSettings = useCallback((patch) => {
-    setSettingsState(prev => {
-      const next = { ...prev, ...patch };
-      return next;
-    });
+    setSettingsState(prev => ({ ...prev, ...patch }));
   }, []);
 
   return { settings, updateSettings };

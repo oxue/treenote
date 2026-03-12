@@ -1,7 +1,10 @@
+import { getNavLabels } from '../keybindings';
 import './HotkeyLegend.css';
 
-export default function HotkeyLegend({ mode, focus }) {
+export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
   const isQueue = focus === 'queue';
+  const nav = getNavLabels(keybindingScheme || 'arrows');
+  const isVim = keybindingScheme === 'vim';
 
   return (
     <div className="hotkey-legend">
@@ -10,8 +13,8 @@ export default function HotkeyLegend({ mode, focus }) {
           <>
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
-                <kbd>&#9668;</kbd>
-                <kbd>&#9658;</kbd>
+                <kbd>{nav.leftSymbol}</kbd>
+                <kbd>{nav.rightSymbol}</kbd>
               </span>
               <span className="legend-desc">Navigate queue</span>
             </div>
@@ -19,8 +22,8 @@ export default function HotkeyLegend({ mode, focus }) {
               <span className="legend-keys arrow-keys">
                 <kbd>&#8679;</kbd>
                 <span className="legend-plus">+</span>
-                <kbd>&#9668;</kbd>
-                <kbd>&#9658;</kbd>
+                <kbd>{nav.leftSymbol}</kbd>
+                <kbd>{nav.rightSymbol}</kbd>
               </span>
               <span className="legend-desc">Reorder</span>
             </div>
@@ -28,13 +31,13 @@ export default function HotkeyLegend({ mode, focus }) {
               <span className="legend-keys arrow-keys">
                 <kbd>&#8984;</kbd>
                 <span className="legend-plus">+</span>
-                <kbd>&#9668;</kbd>
-                <kbd>&#9658;</kbd>
+                <kbd>{nav.leftSymbol}</kbd>
+                <kbd>{nav.rightSymbol}</kbd>
               </span>
               <span className="legend-desc">Insert temp card</span>
             </div>
             <div className="legend-row">
-              <kbd>&#9660;</kbd>
+              <kbd>{nav.downSymbol}</kbd>
               <span className="legend-desc">Back to tree</span>
             </div>
             <div className="legend-row">
@@ -66,18 +69,23 @@ export default function HotkeyLegend({ mode, focus }) {
               <span className="legend-desc">Undo</span>
             </div>
             <div className="legend-row">
-              <kbd>l</kbd>
+              <kbd>{nav.toggleLegend}</kbd>
               <span className="legend-desc">Toggle legend</span>
             </div>
+            {isVim && (
+              <div className="legend-row">
+                <span className="legend-hint">vim mode</span>
+              </div>
+            )}
           </>
         ) : (
           <>
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
-                <kbd>&#9650;</kbd>
-                <kbd>&#9668;</kbd>
-                <kbd>&#9660;</kbd>
-                <kbd>&#9658;</kbd>
+                <kbd>{nav.upSymbol}</kbd>
+                <kbd>{nav.leftSymbol}</kbd>
+                <kbd>{nav.downSymbol}</kbd>
+                <kbd>{nav.rightSymbol}</kbd>
               </span>
               <span className="legend-desc">Navigate</span>
             </div>
@@ -85,8 +93,8 @@ export default function HotkeyLegend({ mode, focus }) {
               <span className="legend-keys arrow-keys">
                 <kbd>&#8679;</kbd>
                 <span className="legend-plus">+</span>
-                <kbd>&#9650;</kbd>
-                <kbd>&#9660;</kbd>
+                <kbd>{nav.upSymbol}</kbd>
+                <kbd>{nav.downSymbol}</kbd>
               </span>
               <span className="legend-desc">Swap node</span>
             </div>
@@ -94,10 +102,10 @@ export default function HotkeyLegend({ mode, focus }) {
               <span className="legend-keys arrow-keys">
                 <kbd>&#8984;</kbd>
                 <span className="legend-plus">+</span>
-                <kbd>&#9650;</kbd>
-                <kbd>&#9668;</kbd>
-                <kbd>&#9660;</kbd>
-                <kbd>&#9658;</kbd>
+                <kbd>{nav.upSymbol}</kbd>
+                <kbd>{nav.leftSymbol}</kbd>
+                <kbd>{nav.downSymbol}</kbd>
+                <kbd>{nav.rightSymbol}</kbd>
               </span>
               <span className="legend-desc">Insert node</span>
             </div>
@@ -158,9 +166,14 @@ export default function HotkeyLegend({ mode, focus }) {
               <span className="legend-desc">Save</span>
             </div>
             <div className="legend-row">
-              <kbd>l</kbd>
+              <kbd>{nav.toggleLegend}</kbd>
               <span className="legend-desc">Toggle legend</span>
             </div>
+            {isVim && (
+              <div className="legend-row">
+                <span className="legend-hint">vim mode</span>
+              </div>
+            )}
           </>
         )
       ) : (

@@ -29,6 +29,12 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 ### Area docs
 - `docs/keybindings.md` — keyboard handling: design philosophy, module structure, key reference, rules for modifying.
 
+### Maintenance rules
+1. **Before touching an area**: read its area doc if one exists.
+2. **After modifying an area**: update the area doc to reflect what changed (new keys, new state, new modules).
+3. **When creating a new area** (new hook, new major subsystem): create a `docs/<area>.md` with design philosophy, module structure, and modification rules. Add a pointer here.
+4. An "area" is any cluster of 2+ files that share non-obvious design constraints (e.g., keybindings span useKeyboard.js + App.jsx + useEjectAnimation.js).
+
 ## Conventions
 
 - Plain CSS, no frameworks. Component CSS lives alongside the component.
@@ -39,7 +45,7 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 
 ## Build & Test
 
-- `npm run dev` — Vite dev server on port 5173
+- `npm run dev` — Vite dev server. **Must run on port 5173** (Supabase OAuth redirect is configured for this port). Kill any existing server on 5173 before starting.
 - `npm run build` — production build (must pass before committing)
 - `npx playwright test` — run tests with video recording
 - Tests mock Supabase auth via `page.route()` and `page.addInitScript()` — no real account needed.

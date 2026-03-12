@@ -7,15 +7,16 @@ import {
   insertChild,
   deleteNodeWithChildren,
   deleteNodeKeepChildren,
+  deleteCheckedNodes,
   swapUp,
   swapDown,
   toggleChecked,
-  deleteCheckedNodes,
   moveToParentLevel,
   moveToSibling,
   toggleMarkdown,
   findNodeById,
 } from '../actions';
+import { isUp, isDown, isLeft, isRight, isVimNavKey, isToggleLegend } from '../keybindings';
 
 export default function useKeyboard({
   tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
@@ -28,8 +29,11 @@ export default function useKeyboard({
   calendarOpen, setCalendarOpen,
   calendarFeedOpen, setCalendarFeedOpen,
   setLegendVisible,
+  keybindingScheme,
   webSettingsOpen, setWebSettingsOpen,
 }) {
+  const scheme = keybindingScheme || 'arrows';
+
   useEffect(() => {
     function handleKeyDown(e) {
       // Cmd+S saves in any mode
@@ -63,12 +67,6 @@ export default function useKeyboard({
         return;
       }
 
-      // Web settings panel — Escape or s closes it
-      if (webSettingsOpen) {
-        // Panel handles its own keyboard events
-        return;
-      }
-
       // Settings / backup modal — Escape closes it
       if (settingsOpen) {
         if (e.key === 'Escape') {
@@ -82,6 +80,14 @@ export default function useKeyboard({
         if (e.key === 'Escape') {
           e.preventDefault();
           setBackupOpen(false);
+        }
+        return;
+      }
+
+      if (webSettingsOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setWebSettingsOpen(false);
         }
         return;
       }
@@ -117,68 +123,75 @@ export default function useKeyboard({
       if (!tree) return;
       const nodes = getCurrentNodes();
       if (nodes.length === 0 && focus === 'graph') return;
-      if (animatingRef.current && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) return;
+      if (animatingRef.current && (isRight(e, scheme) || isLeft(e, scheme))) return;
 
       const isMeta = e.metaKey || e.ctrlKey;
 
       // Queue focus key bindings
       if (focus === 'queue') {
-        switch (e.key) {
-          case 'ArrowLeft':
-            e.preventDefault();
-            if (isMeta) {
-              // Insert temp box to the left
+        // Directional navigation in queue
+        if (isLeft(e, scheme)) {
+          e.preventDefault();
+          if (isMeta) {
+            // Insert temp box to the left
+            setQueue(q => {
+              const newQ = [...q];
+              newQ.splice(queueIndex, 0, { type: 'temp', text: '', checked: false });
+              return newQ;
+            });
+          } else if (e.shiftKey) {
+            // Reorder left
+            if (queueIndex > 0) {
               setQueue(q => {
                 const newQ = [...q];
-                newQ.splice(queueIndex, 0, { type: 'temp', text: '', checked: false });
+                [newQ[queueIndex - 1], newQ[queueIndex]] = [newQ[queueIndex], newQ[queueIndex - 1]];
                 return newQ;
               });
-            } else if (e.shiftKey) {
-              // Reorder left
-              if (queueIndex > 0) {
-                setQueue(q => {
-                  const newQ = [...q];
-                  [newQ[queueIndex - 1], newQ[queueIndex]] = [newQ[queueIndex], newQ[queueIndex - 1]];
-                  return newQ;
-                });
-                setQueueIndex(i => i - 1);
-              }
-            } else {
-              setQueueIndex(i => Math.max(0, i - 1));
+              setQueueIndex(i => i - 1);
             }
-            break;
-          case 'ArrowRight':
-            e.preventDefault();
-            if (isMeta) {
-              // Insert temp box to the right
+          } else {
+            setQueueIndex(i => Math.max(0, i - 1));
+          }
+          return;
+        }
+        if (isRight(e, scheme)) {
+          e.preventDefault();
+          if (isMeta) {
+            // Insert temp box to the right
+            setQueue(q => {
+              const newQ = [...q];
+              newQ.splice(queueIndex + 1, 0, { type: 'temp', text: '', checked: false });
+              return newQ;
+            });
+            setQueueIndex(i => i + 1);
+          } else if (e.shiftKey) {
+            // Reorder right
+            if (queueIndex < queue.length - 1) {
               setQueue(q => {
                 const newQ = [...q];
-                newQ.splice(queueIndex + 1, 0, { type: 'temp', text: '', checked: false });
+                [newQ[queueIndex], newQ[queueIndex + 1]] = [newQ[queueIndex + 1], newQ[queueIndex]];
                 return newQ;
               });
               setQueueIndex(i => i + 1);
-            } else if (e.shiftKey) {
-              // Reorder right
-              if (queueIndex < queue.length - 1) {
-                setQueue(q => {
-                  const newQ = [...q];
-                  [newQ[queueIndex], newQ[queueIndex + 1]] = [newQ[queueIndex + 1], newQ[queueIndex]];
-                  return newQ;
-                });
-                setQueueIndex(i => i + 1);
-              }
-            } else {
-              setQueueIndex(i => Math.min(queue.length - 1, i + 1));
             }
-            break;
-          case 'ArrowDown':
-            e.preventDefault();
-            setFocus('graph');
-            setSelectedIndex(0);
-            break;
-          case 'ArrowUp':
-            e.preventDefault();
-            break;
+          } else {
+            setQueueIndex(i => Math.min(queue.length - 1, i + 1));
+          }
+          return;
+        }
+        if (isDown(e, scheme)) {
+          e.preventDefault();
+          setFocus('graph');
+          setSelectedIndex(0);
+          return;
+        }
+        if (isUp(e, scheme)) {
+          e.preventDefault();
+          return;
+        }
+
+        // Non-directional queue keys
+        switch (e.key) {
           case 'c':
             e.preventDefault();
             if (queue[queueIndex]) {
@@ -252,14 +265,6 @@ export default function useKeyboard({
             e.preventDefault();
             setCalendarFeedOpen(true);
             break;
-          case 'l':
-            e.preventDefault();
-            setLegendVisible(v => !v);
-            break;
-          case 's':
-            e.preventDefault();
-            setWebSettingsOpen(true);
-            break;
           case 'z':
           case 'Z':
             e.preventDefault();
@@ -269,76 +274,94 @@ export default function useKeyboard({
               undo();
             }
             break;
+          default:
+            // Toggle legend — scheme-dependent key
+            if (isToggleLegend(e, scheme)) {
+              e.preventDefault();
+              setLegendVisible(v => !v);
+            }
+            break;
         }
         return;
       }
 
-      // Graph focus key bindings
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          if (isMeta) {
-            applyAction(insertSiblingAbove(tree, path, selectedIndex));
-            setMode('edit');
-          } else if (e.altKey) {
-            const result = moveToSibling(tree, path, selectedIndex, -1);
-            if (result) applyAction(result);
-          } else if (e.shiftKey) {
-            const result = swapUp(tree, path, selectedIndex);
-            if (result) applyAction(result);
-          } else {
-            if (selectedIndex <= 0) {
-              // At top — enter queue if it has items
-              if (queue.length > 0) {
-                setFocus('queue');
-                setQueueIndex(0);
-              }
-            } else {
-              setSelectedIndex(i => i - 1);
+      // Graph focus key bindings — directional navigation
+      if (isUp(e, scheme)) {
+        e.preventDefault();
+        if (isMeta) {
+          applyAction(insertSiblingAbove(tree, path, selectedIndex));
+          setMode('edit');
+        } else if (e.altKey) {
+          const result = moveToSibling(tree, path, selectedIndex, -1);
+          if (result) applyAction(result);
+        } else if (e.shiftKey) {
+          const result = swapUp(tree, path, selectedIndex);
+          if (result) applyAction(result);
+        } else {
+          if (selectedIndex <= 0) {
+            // At top — enter queue if it has items
+            if (queue.length > 0) {
+              setFocus('queue');
+              setQueueIndex(0);
             }
-          }
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          if (isMeta) {
-            applyAction(insertSiblingBelow(tree, path, selectedIndex));
-            setMode('edit');
-          } else if (e.altKey) {
-            const result = moveToSibling(tree, path, selectedIndex, 1);
-            if (result) applyAction(result);
-          } else if (e.shiftKey) {
-            const result = swapDown(tree, path, selectedIndex);
-            if (result) applyAction(result);
           } else {
-            // No wrap-around — stop at bottom
-            setSelectedIndex(i => i >= nodes.length - 1 ? i : i + 1);
+            setSelectedIndex(i => i - 1);
           }
-          break;
-        case 'ArrowRight': {
-          e.preventDefault();
-          if (isMeta) {
-            const result = insertChild(tree, path, selectedIndex);
-            if (result) { applyAction(result); setMode('edit'); }
-          } else {
-            const selected = nodes[selectedIndex];
-            if (selected && selected.children.length > 0) {
-              slideNavigate('right', [...path, selectedIndex], 0);
-            }
-          }
-          break;
         }
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (isMeta) {
-            const result = insertParent(tree, path, selectedIndex);
-            if (result) { applyAction(result); setMode('edit'); }
-          } else if (e.altKey) {
-            const result = moveToParentLevel(tree, path, selectedIndex);
-            if (result) applyAction(result);
-          } else if (path.length > 0) {
-            slideNavigate('left', path.slice(0, -1), path[path.length - 1]);
+        return;
+      }
+      if (isDown(e, scheme)) {
+        e.preventDefault();
+        if (isMeta) {
+          applyAction(insertSiblingBelow(tree, path, selectedIndex));
+          setMode('edit');
+        } else if (e.altKey) {
+          const result = moveToSibling(tree, path, selectedIndex, 1);
+          if (result) applyAction(result);
+        } else if (e.shiftKey) {
+          const result = swapDown(tree, path, selectedIndex);
+          if (result) applyAction(result);
+        } else {
+          // No wrap-around — stop at bottom
+          setSelectedIndex(i => i >= nodes.length - 1 ? i : i + 1);
+        }
+        return;
+      }
+      if (isRight(e, scheme)) {
+        e.preventDefault();
+        if (isMeta) {
+          const result = insertChild(tree, path, selectedIndex);
+          if (result) { applyAction(result); setMode('edit'); }
+        } else {
+          const selected = nodes[selectedIndex];
+          if (selected && selected.children.length > 0) {
+            slideNavigate('right', [...path, selectedIndex], 0);
           }
-          break;
+        }
+        return;
+      }
+      if (isLeft(e, scheme)) {
+        e.preventDefault();
+        if (isMeta) {
+          const result = insertParent(tree, path, selectedIndex);
+          if (result) { applyAction(result); setMode('edit'); }
+        } else if (e.altKey) {
+          const result = moveToParentLevel(tree, path, selectedIndex);
+          if (result) applyAction(result);
+        } else if (path.length > 0) {
+          slideNavigate('left', path.slice(0, -1), path[path.length - 1]);
+        }
+        return;
+      }
+
+      // In vim mode, if a shifted/alt/meta vim nav key wasn't caught above
+      // (e.g. Shift+H without it being a direction), don't let it fall through
+      if (isVimNavKey(e, scheme)) {
+        return;
+      }
+
+      // Non-directional graph keys
+      switch (e.key) {
         case 'Enter':
           e.preventDefault();
           enterEditMode();
@@ -402,18 +425,25 @@ export default function useKeyboard({
           e.preventDefault();
           setCalendarFeedOpen(true);
           break;
-        case 'l':
-          e.preventDefault();
-          setLegendVisible(v => !v);
-          break;
         case 's':
           e.preventDefault();
-          setWebSettingsOpen(true);
+          if (window.treenote?.getSettings) {
+            setSettingsOpen(true);
+          } else {
+            setWebSettingsOpen(true);
+          }
+          break;
+        default:
+          // Toggle legend — scheme-dependent key
+          if (isToggleLegend(e, scheme)) {
+            e.preventDefault();
+            setLegendVisible(v => !v);
+          }
           break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, webSettingsOpen, setWebSettingsOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, scheme, webSettingsOpen, setWebSettingsOpen]);
 }
