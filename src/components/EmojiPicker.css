@@ -1,13 +1,21 @@
 .emoji-picker {
   position: absolute;
   z-index: 1000;
-  background: #16213e;
-  border: 1px solid #0f3460;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(22, 33, 62, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(15, 52, 96, 0.5);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   width: 240px;
   max-height: 260px;
   overflow: hidden;
+  animation: emoji-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes emoji-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .emoji-picker-list {
@@ -19,14 +27,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   cursor: pointer;
   color: #e0e0e0;
+  transition: background 0.1s;
 }
 
 .emoji-picker-item:hover,
 .emoji-picker-item.selected {
-  background: #0f3460;
+  background: rgba(15, 52, 96, 0.5);
 }
 
 .emoji-picker-emoji {
@@ -36,5 +45,5 @@
 
 .emoji-picker-code {
   font-size: 0.85em;
-  color: #888;
+  color: #667;
 }

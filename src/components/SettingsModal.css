@@ -9,10 +9,11 @@
 }
 
 .settings-label {
-  font-size: 13px;
-  color: #888;
+  font-size: 11px;
+  color: #667;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  font-weight: 600;
 }
 
 .settings-file-row {
@@ -24,11 +25,11 @@
 .settings-path {
   flex: 1;
   font-size: 14px;
-  color: #e0e0e0;
-  background: #1a1a2e;
+  color: #8892a4;
+  background: rgba(13, 13, 26, 0.5);
   padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #0f3460;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 52, 96, 0.4);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -52,31 +53,35 @@
   flex-direction: column;
   gap: 3px;
   font-size: 12px;
-  color: #888;
+  color: #667;
 }
 
 .settings-physics-field input {
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
-  border-radius: 4px;
+  background: rgba(13, 13, 26, 0.5);
+  border: 1px solid rgba(15, 52, 96, 0.4);
+  border-radius: 6px;
   color: #e0e0e0;
   padding: 6px 8px;
   font-size: 13px;
   font-family: inherit;
   width: 100%;
+  transition: border-color 0.15s;
 }
 
 .settings-physics-field input:focus {
   outline: none;
   border-color: #e94560;
+  box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.1);
 }
 
 .settings-save-btn {
-  background: #e94560 !important;
+  background: linear-gradient(135deg, #e94560, #d63851) !important;
   border-color: #e94560 !important;
   color: #fff !important;
+  font-weight: 600 !important;
 }
 
 .settings-save-btn:hover {
-  background: #d63050 !important;
+  background: linear-gradient(135deg, #ff5577, #e94560) !important;
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.2) !important;
 }

@@ -4,6 +4,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  animation: queue-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes queue-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .queue-bar.queue-focused {
@@ -11,10 +17,11 @@
 }
 
 .queue-label {
-  font-size: 11px;
-  color: #666;
+  font-size: 10px;
+  color: #556;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -28,34 +35,38 @@
 /* --- Base queue item --- */
 .queue-item {
   padding: 8px 12px;
-  background: #16213e;
-  border: 1.5px solid #0f3460;
-  border-radius: 6px;
+  background: rgba(22, 33, 62, 0.6);
+  border: 1.5px solid rgba(15, 52, 96, 0.5);
+  border-radius: 8px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
 }
 
 .queue-item:hover {
-  border-color: #e94560;
+  border-color: rgba(233, 69, 96, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .queue-item.queue-selected {
   border-color: #e94560;
-  box-shadow: 0 0 10px rgba(233, 69, 96, 0.25);
+  box-shadow: 0 0 16px rgba(233, 69, 96, 0.2), 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .queue-item.queue-temp {
   border-style: dashed;
+  border-color: rgba(233, 69, 96, 0.3);
 }
 
 .queue-item.checked {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .queue-item.checked .queue-item-title {
   text-decoration: line-through;
+  text-decoration-color: rgba(233, 69, 96, 0.4);
 }
 
 /* --- Compact mode --- */
@@ -70,19 +81,19 @@
   min-width: 200px;
   aspect-ratio: 3 / 2;
   padding: 14px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .queue-item.expanded.queue-selected {
-  box-shadow: 0 0 14px rgba(233, 69, 96, 0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(233, 69, 96, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-3px);
 }
 
 .queue-item.expanded.queue-editing {
-  box-shadow: 0 0 18px rgba(233, 69, 96, 0.4);
+  box-shadow: 0 0 24px rgba(233, 69, 96, 0.3);
   aspect-ratio: auto;
   min-height: 133px;
 }
@@ -116,7 +127,7 @@
 /* --- Body (expanded only) --- */
 .queue-item-body {
   font-size: 12px;
-  color: #888;
+  color: #667;
   line-height: 1.4;
   flex: 1;
   overflow: hidden;
@@ -149,6 +160,12 @@
   line-height: 1.4;
   flex: 1;
   min-height: 80px;
+}
+
+/* --- Ejecting animation --- */
+.queue-item.ejecting {
+  opacity: 0.8;
+  transition: none;
 }
 
 /* --- Responsive --- */

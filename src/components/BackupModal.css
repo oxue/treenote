@@ -17,27 +17,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
-  border-radius: 6px;
+  padding: 10px 14px;
+  background: rgba(13, 13, 26, 0.5);
+  border: 1px solid rgba(15, 52, 96, 0.4);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.backup-row:hover {
+  border-color: rgba(15, 52, 96, 0.8);
 }
 
 .backup-date {
   font-size: 13px;
-  color: #e0e0e0;
+  color: #8892a4;
 }
 
 .backup-restore-btn {
-  background: #e94560 !important;
-  border-color: #e94560 !important;
-  color: #fff !important;
+  background: rgba(233, 69, 96, 0.15) !important;
+  border-color: rgba(233, 69, 96, 0.3) !important;
+  color: #e94560 !important;
   font-size: 12px !important;
   padding: 4px 12px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s !important;
 }
 
 .backup-restore-btn:hover {
-  background: #d63050 !important;
+  background: rgba(233, 69, 96, 0.25) !important;
 }
 
 .backup-actions {
@@ -48,7 +55,7 @@
 
 .backup-loading,
 .backup-empty {
-  color: #888;
+  color: #667;
   font-size: 14px;
   padding: 16px 0;
   text-align: center;
