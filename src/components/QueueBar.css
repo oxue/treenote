@@ -2,8 +2,12 @@
 .queue-bar {
   margin-bottom: 12px;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.queue-bar.queue-focused {
+  margin-bottom: 16px;
 }
 
 .queue-label {
@@ -21,44 +25,70 @@
   padding: 4px 0;
 }
 
-.queue-box {
-  min-width: 100px;
-  max-width: 200px;
+/* --- Base queue item --- */
+.queue-item {
   padding: 8px 12px;
   background: #16213e;
   border: 1.5px solid #0f3460;
   border-radius: 6px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  overflow: hidden;
 }
 
-.queue-box:hover {
+.queue-item:hover {
   border-color: #e94560;
 }
 
-.queue-box.queue-selected {
+.queue-item.queue-selected {
   border-color: #e94560;
   box-shadow: 0 0 10px rgba(233, 69, 96, 0.25);
 }
 
-.queue-box.queue-editing {
-  box-shadow: 0 0 14px rgba(233, 69, 96, 0.35);
-}
-
-.queue-box.queue-temp {
+.queue-item.queue-temp {
   border-style: dashed;
 }
 
-.queue-box.checked {
+.queue-item.checked {
   opacity: 0.45;
 }
 
-.queue-box.checked .queue-text {
+.queue-item.checked .queue-item-title {
   text-decoration: line-through;
 }
 
-.queue-text {
+/* --- Compact mode --- */
+.queue-item.compact {
+  min-width: 100px;
+  max-width: 200px;
+}
+
+/* --- Expanded mode --- */
+.queue-item.expanded {
+  width: 200px;
+  min-width: 200px;
+  aspect-ratio: 3 / 2;
+  padding: 14px 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.queue-item.expanded.queue-selected {
+  box-shadow: 0 0 14px rgba(233, 69, 96, 0.3);
+  transform: translateY(-2px);
+}
+
+.queue-item.expanded.queue-editing {
+  box-shadow: 0 0 18px rgba(233, 69, 96, 0.4);
+  aspect-ratio: auto;
+  min-height: 133px;
+}
+
+/* --- Title --- */
+.queue-item-title {
   font-size: 13px;
   color: #e0e0e0;
   white-space: nowrap;
@@ -67,7 +97,46 @@
   display: block;
 }
 
-.queue-text-input {
+.queue-item.expanded .queue-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.queue-item-check {
+  font-size: 11px;
+  color: #4ade80;
+  margin-right: 2px;
+}
+
+/* --- Body (expanded only) --- */
+.queue-item-body {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.4;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap;
+}
+
+/* --- Badges (expanded only) --- */
+.queue-item-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+/* --- Edit input --- */
+.queue-item-input {
   font-size: 13px;
   background: transparent;
   border: none;
@@ -78,4 +147,28 @@
   resize: none;
   overflow: hidden;
   line-height: 1.4;
+  flex: 1;
+  min-height: 80px;
+}
+
+/* --- Responsive --- */
+@media (min-width: 1200px) {
+  .queue-item.expanded {
+    width: 220px;
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 800px) {
+  .queue-item.expanded {
+    width: 170px;
+    min-width: 170px;
+  }
+}
+
+@media (max-width: 600px) {
+  .queue-item.expanded {
+    width: 150px;
+    min-width: 150px;
+  }
 }

@@ -1,32 +1,53 @@
+import { useRef, useEffect, useCallback } from 'react';
 import { findNodeById } from '../actions';
+import DeadlineBadge from './DeadlineBadge';
 import './QueueBar.css';
 
 export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
+  const selectedCardRef = useRef(null);
+  const isFocused = focus === 'queue';
+
+  // Scroll selected card into view
+  useEffect(() => {
+    if (isFocused && selectedCardRef.current) {
+      selectedCardRef.current.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }
+  }, [isFocused, queueIndex]);
+
   return (
     <>
       {queue.length > 0 && (
-        <div className="queue-bar">
+        <div className={`queue-bar ${isFocused ? 'queue-focused' : ''}`}>
           <div className="queue-label">Queue</div>
           <div className="queue-items">
             {queue.map((item, i) => {
-              const isSelected = focus === 'queue' && i === queueIndex;
+              const isSelected = isFocused && i === queueIndex;
               const isEditing = isSelected && mode === 'edit';
               const resolved = item.type === 'ref' && item.nodeId && tree ? findNodeById(tree, item.nodeId) : null;
               const treeNode = resolved ? resolved.node : null;
               const displayText = treeNode ? treeNode.text : item.text;
               const displayChecked = treeNode ? treeNode.checked : item.checked;
+              const displayDeadline = treeNode ? treeNode.deadline : item.deadline;
+              const displayDeadlineTime = treeNode ? treeNode.deadlineTime : item.deadlineTime;
+              const displayDeadlineDuration = treeNode ? treeNode.deadlineDuration : item.deadlineDuration;
+              const displayPriority = treeNode ? treeNode.priority : item.priority;
+              const displayDetails = item.details || '';
+
+              const firstLine = (displayText || '').split('\n')[0] || (item.type === 'temp' ? '...' : '');
+
               return (
                 <div
                   key={i}
-                  className={`queue-box ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
+                  ref={isSelected ? selectedCardRef : undefined}
+                  className={`queue-item ${isFocused ? 'expanded' : 'compact'} ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
                   onClick={() => onSelectItem(i)}
                 >
                   {isEditing ? (
                     <textarea
                       ref={queueEditRef}
-                      className="queue-text-input"
+                      className="queue-item-input"
                       defaultValue={displayText}
-                      rows={1}
+                      rows={4}
                       autoFocus
                       onInput={(e) => {
                         e.target.style.height = 'auto';
@@ -47,9 +68,21 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <span className="queue-text">
-                      {displayText || (item.type === 'temp' ? '...' : '')}
-                    </span>
+                    <>
+                      <div className="queue-item-title">
+                        {displayChecked && <span className="queue-item-check">&#10003; </span>}
+                        {firstLine}
+                      </div>
+                      {isFocused && displayText && displayText.includes('\n') && (
+                        <div className="queue-item-body">{displayText.split('\n').slice(1).join('\n')}</div>
+                      )}
+                      {isFocused && (
+                        <div className="queue-item-badges">
+                          <DeadlineBadge deadline={displayDeadline} deadlineTime={displayDeadlineTime} deadlineDuration={displayDeadlineDuration} />
+                          {displayPriority && <span className={`priority-badge ${displayPriority}`}>{displayPriority}</span>}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               );
@@ -60,19 +93,20 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
       {ejecting.map((item) => (
         <div
           key={item.id}
-          className="queue-box ejecting"
+          className={`queue-item ${item.expanded ? 'expanded' : 'compact'} ejecting`}
           style={{
             position: 'fixed',
             left: item.x,
             top: item.y,
             width: item.width,
+            height: item.expanded ? item.height : undefined,
             transform: `rotate(${item.rotation}rad)`,
             pointerEvents: 'none',
             zIndex: 400,
           }}
         >
-          <span className="queue-text" style={{ textDecoration: 'line-through' }}>
-            {item.text || '...'}
+          <span className="queue-item-title" style={{ textDecoration: 'line-through' }}>
+            {(item.text || '...').split('\n')[0]}
           </span>
         </div>
       ))}

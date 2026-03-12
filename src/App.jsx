@@ -55,6 +55,7 @@ export default function App({ session }) {
   const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarFeedOpen, setCalendarFeedOpen] = useState(false);
+  const [legendVisible, setLegendVisible] = useState(true);
   const [emojiPicker, setEmojiPicker] = useState({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
@@ -63,7 +64,7 @@ export default function App({ session }) {
   const loadedRef = useRef(false);
   const versionRef = useRef(0);
 
-  const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex);
+  const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex, focus);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
 
   const getCurrentNodes = useCallback(() => {
@@ -112,12 +113,12 @@ export default function App({ session }) {
   // Apply an action result and push undo
   const applyAction = useCallback((result) => {
     if (!result || !tree) return;
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
     setRedoStack([]);
     setTree(result.tree);
     setPath(result.path);
     setSelectedIndex(result.selectedIndex);
-  }, [tree, path, selectedIndex]);
+  }, [tree, path, selectedIndex, queue]);
 
   const enterEditMode = useCallback(() => {
     if (!selectedNode) return;
@@ -182,21 +183,23 @@ export default function App({ session }) {
     if (undoStack.length === 0) return;
     const prev = undoStack[undoStack.length - 1];
     setUndoStack(stack => stack.slice(0, -1));
-    setRedoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
     setTree(prev.tree);
     setPath(prev.path);
     setSelectedIndex(prev.selectedIndex);
-  }, [undoStack, tree, path, selectedIndex]);
+    if (prev.queue) setQueue(prev.queue);
+  }, [undoStack, tree, path, selectedIndex, queue]);
 
   const redo = useCallback(() => {
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
     setRedoStack(stack => stack.slice(0, -1));
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
     setTree(next.tree);
     setPath(next.path);
     setSelectedIndex(next.selectedIndex);
-  }, [redoStack, tree, path, selectedIndex]);
+    if (next.queue) setQueue(next.queue);
+  }, [redoStack, tree, path, selectedIndex, queue]);
 
   // Focus textarea when entering edit mode
   useEffect(() => {
@@ -315,16 +318,22 @@ export default function App({ session }) {
     setTree(newTree);
   }, [tree, path, selectedIndex, selectedNode]);
 
+  const pushUndo = useCallback(() => {
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
+    setRedoStack([]);
+  }, [tree, path, selectedIndex, queue]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
-    focus, queue, queueIndex,
+    focus, queue, queueIndex, pushUndo,
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
     conflict, onConflictKeepMine: handleConflictKeepMine, onConflictKeepTheirs: handleConflictKeepTheirs, onConflictKeepBoth: handleConflictKeepBoth,
     calendarOpen, setCalendarOpen,
     calendarFeedOpen, setCalendarFeedOpen,
+    setLegendVisible,
   });
 
   // Scroll selected item into view
@@ -486,14 +495,22 @@ export default function App({ session }) {
 
   return (
     <div className="app" onClick={(e) => {
-      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box')) {
+      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-item')) {
         if (queueEditRef.current) {
           const newText = queueEditRef.current.value.trim();
           const item = queue[queueIndex];
+          pushUndo();
           setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, text: newText } : it));
           if (item && item.type === 'ref' && item.nodeId) {
             const found = findNodeById(tree, item.nodeId);
-            if (found) applyAction(editNodeText(tree, found.path, found.index, newText));
+            if (found) {
+              const result = editNodeText(tree, found.path, found.index, newText);
+              if (result) {
+                setTree(result.tree);
+                setPath(result.path);
+                setSelectedIndex(result.selectedIndex);
+              }
+            }
           }
         }
         setMode('visual');
@@ -576,10 +593,18 @@ export default function App({ session }) {
         onSelectItem={(i) => { setFocus('queue'); setQueueIndex(i); }}
         onUpdateText={(i, text) => {
           const item = queue[i];
+          pushUndo();
           setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it));
           if (item.type === 'ref' && item.nodeId) {
             const found = findNodeById(tree, item.nodeId);
-            if (found) applyAction(editNodeText(tree, found.path, found.index, text));
+            if (found) {
+              const result = editNodeText(tree, found.path, found.index, text);
+              if (result) {
+                setTree(result.tree);
+                setPath(result.path);
+                setSelectedIndex(result.selectedIndex);
+              }
+            }
           }
         }}
         onExitEdit={() => setMode('visual')}
@@ -635,13 +660,13 @@ export default function App({ session }) {
 
             <div className="node-list" ref={currentColRef}>
               {currentNodes.map((node, i) => {
-                const isSelected = i === selectedIndex;
+                const isSelected = i === selectedIndex && focus === 'graph';
                 const isEditing = isSelected && mode === 'edit';
 
                 return (
                   <div
                     key={i}
-                    ref={isSelected ? selectedNodeRef : undefined}
+                    ref={i === selectedIndex ? selectedNodeRef : undefined}
                     className={`node-box ${isSelected && !isEditing ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${node.checked ? 'checked' : ''}`}
                     onClick={() => handleNodeClick(i)}
                     onDoubleClick={() => {
@@ -857,7 +882,7 @@ export default function App({ session }) {
           onClose={() => setCalendarFeedOpen(false)}
         />
       )}
-      <HotkeyLegend mode={mode} />
+      {legendVisible && <HotkeyLegend mode={mode} focus={focus} />}
     </div>
   );
 }

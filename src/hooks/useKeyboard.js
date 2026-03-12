@@ -20,13 +20,14 @@ import {
 export default function useKeyboard({
   tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
   getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
-  focus, queue, queueIndex,
+  focus, queue, queueIndex, pushUndo,
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
   onSave, setBackupOpen,
   conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth,
   calendarOpen, setCalendarOpen,
   calendarFeedOpen, setCalendarFeedOpen,
+  setLegendVisible,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -174,16 +175,15 @@ export default function useKeyboard({
           case 'c':
             e.preventDefault();
             if (queue[queueIndex]) {
+              pushUndo();
               const item = queue[queueIndex];
               if (item.checked) {
                 setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, checked: false } : it));
-                // Sync uncheck to tree for ref items
                 if (item.type === 'ref' && item.nodeId) {
                   const found = findNodeById(tree, item.nodeId);
                   if (found) applyAction(toggleChecked(tree, found.path, found.index));
                 }
               } else {
-                // Sync check to tree for ref items
                 if (item.type === 'ref' && item.nodeId) {
                   const found = findNodeById(tree, item.nodeId);
                   if (found) applyAction(toggleChecked(tree, found.path, found.index));
@@ -195,6 +195,7 @@ export default function useKeyboard({
           case 'x':
             e.preventDefault();
             if (queue.length > 0) {
+              pushUndo();
               setQueue(q => q.filter((_, i) => i !== queueIndex));
               setQueueIndex(i => Math.min(i, queue.length - 2));
               if (queue.length <= 1) {
@@ -220,6 +221,43 @@ export default function useKeyboard({
               }
             }
             break;
+          case 'd':
+            e.preventDefault();
+            if (queue[queueIndex] && queue[queueIndex].type === 'ref' && queue[queueIndex].nodeId) {
+              const found = findNodeById(tree, queue[queueIndex].nodeId);
+              if (found) {
+                setPath(found.path);
+                setSelectedIndex(found.index);
+                setCalendarOpen(true);
+              }
+            }
+            break;
+          case 'm':
+            e.preventDefault();
+            if (queue[queueIndex] && queue[queueIndex].type === 'ref' && queue[queueIndex].nodeId) {
+              const found = findNodeById(tree, queue[queueIndex].nodeId);
+              if (found) {
+                applyAction(toggleMarkdown(tree, found.path, found.index));
+              }
+            }
+            break;
+          case 'f':
+            e.preventDefault();
+            setCalendarFeedOpen(true);
+            break;
+          case 'l':
+            e.preventDefault();
+            setLegendVisible(v => !v);
+            break;
+          case 'z':
+          case 'Z':
+            e.preventDefault();
+            if (e.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+            break;
         }
         return;
       }
@@ -242,7 +280,7 @@ export default function useKeyboard({
               // At top — enter queue if it has items
               if (queue.length > 0) {
                 setFocus('queue');
-                setQueueIndex(queue.length - 1);
+                setQueueIndex(0);
               }
             } else {
               setSelectedIndex(i => i - 1);
@@ -353,10 +391,14 @@ export default function useKeyboard({
           e.preventDefault();
           setCalendarFeedOpen(true);
           break;
+        case 'l':
+          e.preventDefault();
+          setLegendVisible(v => !v);
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible]);
 }

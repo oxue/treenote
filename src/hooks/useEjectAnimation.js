@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex) {
+export default function useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex, focus) {
   const [ejecting, setEjecting] = useState([]);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export default function useEjectAnimation(physics, queue, setQueue, setFocus, se
   }, [ejecting.length > 0]);
 
   function ejectQueueItem(index) {
-    const el = document.querySelectorAll('.queue-box')[index];
+    const el = document.querySelectorAll('.queue-item')[index];
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const item = queue[index];
@@ -33,6 +33,8 @@ export default function useEjectAnimation(physics, queue, setQueue, setFocus, se
       x: rect.left,
       y: rect.top,
       width: rect.width,
+      height: rect.height,
+      expanded: focus === 'queue',
       vx: physics.vx,
       vy: physics.vy,
       ay: physics.gravity,
