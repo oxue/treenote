@@ -1,11 +1,18 @@
-import { useRef } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { findNodeById } from '../actions';
 import DeadlineBadge from './DeadlineBadge';
 import './QueueBar.css';
 
-export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onUpdateDetails, onExitEdit }) {
-  const detailsRef = useRef(null);
+export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
+  const selectedCardRef = useRef(null);
   const isFocused = focus === 'queue';
+
+  // Scroll selected card into view
+  useEffect(() => {
+    if (isFocused && selectedCardRef.current) {
+      selectedCardRef.current.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }
+  }, [isFocused, queueIndex]);
 
   return (
     <>
@@ -26,115 +33,55 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
               const displayPriority = treeNode ? treeNode.priority : item.priority;
               const displayDetails = item.details || '';
 
-              if (!isFocused) {
-                // Compact box mode when queue is not focused
-                return (
-                  <div
-                    key={i}
-                    className={`queue-box ${isSelected ? 'queue-selected' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
-                    onClick={() => onSelectItem(i)}
-                  >
-                    <span className="queue-text">
-                      {displayText || (item.type === 'temp' ? '...' : '')}
-                    </span>
-                  </div>
-                );
-              }
+              const firstLine = (displayText || '').split('\n')[0] || (item.type === 'temp' ? '...' : '');
 
-              // Card mode when queue is focused
               return (
                 <div
                   key={i}
-                  className={`queue-card ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
+                  ref={isSelected ? selectedCardRef : undefined}
+                  className={`queue-item ${isFocused ? 'expanded' : 'compact'} ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
                   onClick={() => onSelectItem(i)}
                 >
                   {isEditing ? (
-                    <>
-                      <textarea
-                        ref={queueEditRef}
-                        className="queue-card-title-input"
-                        defaultValue={displayText}
-                        rows={1}
-                        autoFocus
-                        onInput={(e) => {
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') {
-                            e.preventDefault();
-                            onUpdateText(i, e.target.value.trim());
-                            if (detailsRef.current) {
-                              onUpdateDetails(i, detailsRef.current.value.trim());
-                            }
-                            onExitEdit();
-                          }
-                          if (e.key === 'Tab') {
-                            e.preventDefault();
-                            if (detailsRef.current) detailsRef.current.focus();
-                          }
-                          e.stopPropagation();
-                        }}
-                        onBlur={(e) => {
-                          // Only commit if focus leaves the card entirely
-                          const related = e.relatedTarget;
-                          if (related && e.currentTarget.closest('.queue-card')?.contains(related)) return;
+                    <textarea
+                      ref={queueEditRef}
+                      className="queue-item-input"
+                      defaultValue={displayText}
+                      rows={4}
+                      autoFocus
+                      onInput={(e) => {
+                        e.target.style.height = 'auto';
+                        e.target.style.height = e.target.scrollHeight + 'px';
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
                           onUpdateText(i, e.target.value.trim());
-                          if (detailsRef.current) {
-                            onUpdateDetails(i, detailsRef.current.value.trim());
-                          }
                           onExitEdit();
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <textarea
-                        ref={detailsRef}
-                        className="queue-card-details-input"
-                        defaultValue={displayDetails}
-                        placeholder="Add details..."
-                        rows={2}
-                        onInput={(e) => {
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') {
-                            e.preventDefault();
-                            if (queueEditRef.current) {
-                              onUpdateText(i, queueEditRef.current.value.trim());
-                            }
-                            onUpdateDetails(i, e.target.value.trim());
-                            onExitEdit();
-                          }
-                          e.stopPropagation();
-                        }}
-                        onBlur={(e) => {
-                          const related = e.relatedTarget;
-                          if (related && e.currentTarget.closest('.queue-card')?.contains(related)) return;
-                          if (queueEditRef.current) {
-                            onUpdateText(i, queueEditRef.current.value.trim());
-                          }
-                          onUpdateDetails(i, e.target.value.trim());
-                          onExitEdit();
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </>
+                        }
+                        e.stopPropagation();
+                      }}
+                      onBlur={(e) => {
+                        onUpdateText(i, e.target.value.trim());
+                        onExitEdit();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   ) : (
                     <>
-                      <div className="queue-card-title">
-                        {displayChecked && <span className="queue-card-checked-icon">&#10003; </span>}
-                        {displayText || (item.type === 'temp' ? '...' : '')}
+                      <div className="queue-item-title">
+                        {displayChecked && <span className="queue-item-check">&#10003; </span>}
+                        {firstLine}
                       </div>
-                      {displayDetails ? (
-                        <div className="queue-card-details">{displayDetails}</div>
-                      ) : (
-                        <div className="queue-card-details empty">No details</div>
+                      {isFocused && displayText && displayText.includes('\n') && (
+                        <div className="queue-item-body">{displayText.split('\n').slice(1).join('\n')}</div>
                       )}
-                      <div className="queue-card-badges">
-                        <DeadlineBadge deadline={displayDeadline} deadlineTime={displayDeadlineTime} deadlineDuration={displayDeadlineDuration} />
-                        {displayPriority && <span className={`priority-badge ${displayPriority}`}>{displayPriority}</span>}
-                      </div>
+                      {isFocused && (
+                        <div className="queue-item-badges">
+                          <DeadlineBadge deadline={displayDeadline} deadlineTime={displayDeadlineTime} deadlineDuration={displayDeadlineDuration} />
+                          {displayPriority && <span className={`priority-badge ${displayPriority}`}>{displayPriority}</span>}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -146,19 +93,20 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
       {ejecting.map((item) => (
         <div
           key={item.id}
-          className="queue-box ejecting"
+          className={`queue-item ${item.expanded ? 'expanded' : 'compact'} ejecting`}
           style={{
             position: 'fixed',
             left: item.x,
             top: item.y,
             width: item.width,
+            height: item.expanded ? item.height : undefined,
             transform: `rotate(${item.rotation}rad)`,
             pointerEvents: 'none',
             zIndex: 400,
           }}
         >
-          <span className="queue-text" style={{ textDecoration: 'line-through' }}>
-            {item.text || '...'}
+          <span className="queue-item-title" style={{ textDecoration: 'line-through' }}>
+            {(item.text || '...').split('\n')[0]}
           </span>
         </div>
       ))}

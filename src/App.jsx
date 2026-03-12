@@ -63,7 +63,7 @@ export default function App({ session }) {
   const loadedRef = useRef(false);
   const versionRef = useRef(0);
 
-  const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex);
+  const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex, focus);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
 
   const getCurrentNodes = useCallback(() => {
@@ -112,12 +112,12 @@ export default function App({ session }) {
   // Apply an action result and push undo
   const applyAction = useCallback((result) => {
     if (!result || !tree) return;
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
     setRedoStack([]);
     setTree(result.tree);
     setPath(result.path);
     setSelectedIndex(result.selectedIndex);
-  }, [tree, path, selectedIndex]);
+  }, [tree, path, selectedIndex, queue]);
 
   const enterEditMode = useCallback(() => {
     if (!selectedNode) return;
@@ -182,21 +182,23 @@ export default function App({ session }) {
     if (undoStack.length === 0) return;
     const prev = undoStack[undoStack.length - 1];
     setUndoStack(stack => stack.slice(0, -1));
-    setRedoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setRedoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
     setTree(prev.tree);
     setPath(prev.path);
     setSelectedIndex(prev.selectedIndex);
-  }, [undoStack, tree, path, selectedIndex]);
+    if (prev.queue) setQueue(prev.queue);
+  }, [undoStack, tree, path, selectedIndex, queue]);
 
   const redo = useCallback(() => {
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
     setRedoStack(stack => stack.slice(0, -1));
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
     setTree(next.tree);
     setPath(next.path);
     setSelectedIndex(next.selectedIndex);
-  }, [redoStack, tree, path, selectedIndex]);
+    if (next.queue) setQueue(next.queue);
+  }, [redoStack, tree, path, selectedIndex, queue]);
 
   // Focus textarea when entering edit mode
   useEffect(() => {
@@ -315,10 +317,15 @@ export default function App({ session }) {
     setTree(newTree);
   }, [tree, path, selectedIndex, selectedNode]);
 
+  const pushUndo = useCallback(() => {
+    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex, queue: [...queue] }]);
+    setRedoStack([]);
+  }, [tree, path, selectedIndex, queue]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
-    focus, queue, queueIndex,
+    focus, queue, queueIndex, pushUndo,
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
@@ -486,7 +493,7 @@ export default function App({ session }) {
 
   return (
     <div className="app" onClick={(e) => {
-      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box') && !e.target.closest('.queue-card')) {
+      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-item')) {
         if (queueEditRef.current) {
           const newText = queueEditRef.current.value.trim();
           const item = queue[queueIndex];
@@ -582,9 +589,6 @@ export default function App({ session }) {
             if (found) applyAction(editNodeText(tree, found.path, found.index, text));
           }
         }}
-        onUpdateDetails={(i, details) => {
-          setQueue(q => q.map((it, idx) => idx === i ? { ...it, details } : it));
-        }}
         onExitEdit={() => setMode('visual')}
       />
 
@@ -638,13 +642,13 @@ export default function App({ session }) {
 
             <div className="node-list" ref={currentColRef}>
               {currentNodes.map((node, i) => {
-                const isSelected = i === selectedIndex;
+                const isSelected = i === selectedIndex && focus === 'graph';
                 const isEditing = isSelected && mode === 'edit';
 
                 return (
                   <div
                     key={i}
-                    ref={isSelected ? selectedNodeRef : undefined}
+                    ref={i === selectedIndex ? selectedNodeRef : undefined}
                     className={`node-box ${isSelected && !isEditing ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${node.checked ? 'checked' : ''}`}
                     onClick={() => handleNodeClick(i)}
                     onDoubleClick={() => {

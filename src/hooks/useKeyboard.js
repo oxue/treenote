@@ -20,7 +20,7 @@ import {
 export default function useKeyboard({
   tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
   getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
-  focus, queue, queueIndex,
+  focus, queue, queueIndex, pushUndo,
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
   onSave, setBackupOpen,
@@ -174,16 +174,15 @@ export default function useKeyboard({
           case 'c':
             e.preventDefault();
             if (queue[queueIndex]) {
+              pushUndo();
               const item = queue[queueIndex];
               if (item.checked) {
                 setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, checked: false } : it));
-                // Sync uncheck to tree for ref items
                 if (item.type === 'ref' && item.nodeId) {
                   const found = findNodeById(tree, item.nodeId);
                   if (found) applyAction(toggleChecked(tree, found.path, found.index));
                 }
               } else {
-                // Sync check to tree for ref items
                 if (item.type === 'ref' && item.nodeId) {
                   const found = findNodeById(tree, item.nodeId);
                   if (found) applyAction(toggleChecked(tree, found.path, found.index));
@@ -195,6 +194,7 @@ export default function useKeyboard({
           case 'x':
             e.preventDefault();
             if (queue.length > 0) {
+              pushUndo();
               setQueue(q => q.filter((_, i) => i !== queueIndex));
               setQueueIndex(i => Math.min(i, queue.length - 2));
               if (queue.length <= 1) {
@@ -242,7 +242,7 @@ export default function useKeyboard({
               // At top — enter queue if it has items
               if (queue.length > 0) {
                 setFocus('queue');
-                setQueueIndex(queue.length - 1);
+                setQueueIndex(0);
               }
             } else {
               setSelectedIndex(i => i - 1);
@@ -358,5 +358,5 @@ export default function useKeyboard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen]);
 }
