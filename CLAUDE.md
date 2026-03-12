@@ -16,6 +16,19 @@ Before creating a new component, hook, or utility:
 - Storage/API calls go in `src/storage.js`.
 - New components get their own file in `src/components/`.
 
+## Context Architecture (Layered Indirection)
+
+CLAUDE.md contains **policies and pointers**, not implementation details. For any area of concern, follow this 3-level chain:
+
+1. **CLAUDE.md** — rules, conventions, pointers to area docs.
+2. **Area docs** (`docs/`) — design philosophy, module relationships, key routing. Read these before touching the area.
+3. **Source files** — the actual implementation. Area docs tell you which files to read.
+
+This keeps CLAUDE.md small (it's always in context) while giving Claude enough breadcrumbs to find what it needs.
+
+### Area docs
+- `docs/keybindings.md` — keyboard handling: design philosophy, module structure, key reference, rules for modifying.
+
 ## Conventions
 
 - Plain CSS, no frameworks. Component CSS lives alongside the component.
