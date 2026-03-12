@@ -27,6 +27,7 @@ export default function useKeyboard({
   conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth,
   calendarOpen, setCalendarOpen,
   calendarFeedOpen, setCalendarFeedOpen,
+  setLegendVisible,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -220,6 +221,43 @@ export default function useKeyboard({
               }
             }
             break;
+          case 'd':
+            e.preventDefault();
+            if (queue[queueIndex] && queue[queueIndex].type === 'ref' && queue[queueIndex].nodeId) {
+              const found = findNodeById(tree, queue[queueIndex].nodeId);
+              if (found) {
+                setPath(found.path);
+                setSelectedIndex(found.index);
+                setCalendarOpen(true);
+              }
+            }
+            break;
+          case 'm':
+            e.preventDefault();
+            if (queue[queueIndex] && queue[queueIndex].type === 'ref' && queue[queueIndex].nodeId) {
+              const found = findNodeById(tree, queue[queueIndex].nodeId);
+              if (found) {
+                applyAction(toggleMarkdown(tree, found.path, found.index));
+              }
+            }
+            break;
+          case 'f':
+            e.preventDefault();
+            setCalendarFeedOpen(true);
+            break;
+          case 'l':
+            e.preventDefault();
+            setLegendVisible(v => !v);
+            break;
+          case 'z':
+          case 'Z':
+            e.preventDefault();
+            if (e.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+            break;
         }
         return;
       }
@@ -353,10 +391,14 @@ export default function useKeyboard({
           e.preventDefault();
           setCalendarFeedOpen(true);
           break;
+        case 'l':
+          e.preventDefault();
+          setLegendVisible(v => !v);
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible]);
 }

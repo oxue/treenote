@@ -55,6 +55,7 @@ export default function App({ session }) {
   const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarFeedOpen, setCalendarFeedOpen] = useState(false);
+  const [legendVisible, setLegendVisible] = useState(true);
   const [emojiPicker, setEmojiPicker] = useState({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
@@ -332,6 +333,7 @@ export default function App({ session }) {
     conflict, onConflictKeepMine: handleConflictKeepMine, onConflictKeepTheirs: handleConflictKeepTheirs, onConflictKeepBoth: handleConflictKeepBoth,
     calendarOpen, setCalendarOpen,
     calendarFeedOpen, setCalendarFeedOpen,
+    setLegendVisible,
   });
 
   // Scroll selected item into view
@@ -497,10 +499,18 @@ export default function App({ session }) {
         if (queueEditRef.current) {
           const newText = queueEditRef.current.value.trim();
           const item = queue[queueIndex];
+          pushUndo();
           setQueue(q => q.map((it, idx) => idx === queueIndex ? { ...it, text: newText } : it));
           if (item && item.type === 'ref' && item.nodeId) {
             const found = findNodeById(tree, item.nodeId);
-            if (found) applyAction(editNodeText(tree, found.path, found.index, newText));
+            if (found) {
+              const result = editNodeText(tree, found.path, found.index, newText);
+              if (result) {
+                setTree(result.tree);
+                setPath(result.path);
+                setSelectedIndex(result.selectedIndex);
+              }
+            }
           }
         }
         setMode('visual');
@@ -583,10 +593,18 @@ export default function App({ session }) {
         onSelectItem={(i) => { setFocus('queue'); setQueueIndex(i); }}
         onUpdateText={(i, text) => {
           const item = queue[i];
+          pushUndo();
           setQueue(q => q.map((it, idx) => idx === i ? { ...it, text } : it));
           if (item.type === 'ref' && item.nodeId) {
             const found = findNodeById(tree, item.nodeId);
-            if (found) applyAction(editNodeText(tree, found.path, found.index, text));
+            if (found) {
+              const result = editNodeText(tree, found.path, found.index, text);
+              if (result) {
+                setTree(result.tree);
+                setPath(result.path);
+                setSelectedIndex(result.selectedIndex);
+              }
+            }
           }
         }}
         onExitEdit={() => setMode('visual')}
@@ -864,7 +882,7 @@ export default function App({ session }) {
           onClose={() => setCalendarFeedOpen(false)}
         />
       )}
-      <HotkeyLegend mode={mode} />
+      {legendVisible && <HotkeyLegend mode={mode} focus={focus} />}
     </div>
   );
 }
