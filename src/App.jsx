@@ -540,7 +540,7 @@ export default function App({ session }) {
         )}
         {tree && userId && (
           <button className="load-btn" onClick={handleSave}>
-            Save
+            <span className="save-dot" />Save
           </button>
         )}
         {window.treenote?.getSettings && (

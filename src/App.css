@@ -84,6 +84,22 @@ body {
   transform: translateY(0);
 }
 
+/* Save indicator dot */
+.save-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  display: inline-block;
+  margin-right: 6px;
+  animation: save-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes save-dot-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 /* ===== Mode Indicator ===== */
 .mode-indicator {
   font-size: 11px;
@@ -219,10 +235,12 @@ body {
   border-color: #e94560;
   background: rgba(26, 26, 62, 0.8);
   box-shadow: 0 0 20px rgba(233, 69, 96, 0.12), inset 0 0 0 1px rgba(233, 69, 96, 0.05);
+  border-left: 3px solid #e94560;
 }
 
 .node-box.editing {
   border-color: #e94560;
+  border-left: 3px solid #e94560;
   background: rgba(26, 26, 62, 0.9);
   box-shadow: 0 0 24px rgba(233, 69, 96, 0.2), inset 0 0 0 1px rgba(233, 69, 96, 0.1);
   position: relative;
