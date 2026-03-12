@@ -26,6 +26,7 @@ export default function useKeyboard({
   onSave, setBackupOpen,
   conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth,
   calendarOpen, setCalendarOpen,
+  calendarFeedOpen, setCalendarFeedOpen,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -47,6 +48,9 @@ export default function useKeyboard({
 
       // Metadata panel is open — let the component handle keys
       if (calendarOpen) return;
+
+      // Calendar feed modal is open — let the component handle keys
+      if (calendarFeedOpen) return;
 
       // Conflict modal — 1/2/3 to resolve
       if (conflict) {
@@ -345,10 +349,14 @@ export default function useKeyboard({
             setCalendarOpen(true);
           }
           break;
+        case 'f':
+          e.preventDefault();
+          setCalendarFeedOpen(true);
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen]);
 }

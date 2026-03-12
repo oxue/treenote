@@ -71,6 +71,10 @@ export default function HotkeyLegend({ mode }) {
             <span className="legend-desc">Deadline / metadata</span>
           </div>
           <div className="legend-row">
+            <kbd>f</kbd>
+            <span className="legend-desc">Calendar feed</span>
+          </div>
+          <div className="legend-row">
             <span className="legend-keys arrow-keys">
               <kbd>&#8984;</kbd>
               <span className="legend-plus">+</span>
