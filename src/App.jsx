@@ -550,16 +550,18 @@ export default function App({ session }) {
             <span className="save-dot" />Save
           </button>
         )}
-        {window.treenote?.getSettings && (
-          <button className="load-btn settings-btn" onClick={() => {
+        <button className="load-btn settings-btn" onClick={() => {
+          if (window.treenote?.getSettings) {
             window.treenote.getSettings().then((config) => {
               setSettingsInitial({ path: config.defaultFile || '', physics: config.physics || physics });
               setSettingsOpen(true);
             });
-          }}>
-            &#9881;
-          </button>
-        )}
+          } else {
+            setWebSettingsOpen(true);
+          }
+        }}>
+          &#9881;
+        </button>
         {userId && (
           <button className="load-btn" onClick={() => supabase.auth.signOut()}>
             Logout
