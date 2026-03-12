@@ -19,6 +19,7 @@ import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
 import DeadlineBadge from './components/DeadlineBadge';
 import MetadataPanel from './components/MetadataPanel';
+import CalendarFeedModal from './components/CalendarFeedModal';
 import EmojiPicker from './components/EmojiPicker';
 import { emojis as emojiList } from './emojiData';
 import useEjectAnimation from './hooks/useEjectAnimation';
@@ -53,6 +54,7 @@ export default function App({ session }) {
   const [focus, setFocus] = useState('graph');
   const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarFeedOpen, setCalendarFeedOpen] = useState(false);
   const [emojiPicker, setEmojiPicker] = useState({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
@@ -322,6 +324,7 @@ export default function App({ session }) {
     onSave: userId ? handleSave : undefined,
     conflict, onConflictKeepMine: handleConflictKeepMine, onConflictKeepTheirs: handleConflictKeepTheirs, onConflictKeepBoth: handleConflictKeepBoth,
     calendarOpen, setCalendarOpen,
+    calendarFeedOpen, setCalendarFeedOpen,
   });
 
   // Scroll selected item into view
@@ -845,6 +848,12 @@ export default function App({ session }) {
           onSetTime={(time) => setNodeTime(time)}
           onSetDuration={(duration) => setNodeDuration(duration)}
           onClose={() => setCalendarOpen(false)}
+        />
+      )}
+      {calendarFeedOpen && userId && (
+        <CalendarFeedModal
+          userId={userId}
+          onClose={() => setCalendarFeedOpen(false)}
         />
       )}
       <HotkeyLegend mode={mode} />
