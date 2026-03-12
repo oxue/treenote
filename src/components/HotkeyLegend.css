@@ -3,10 +3,10 @@
   position: fixed;
   bottom: 16px;
   left: 16px;
-  background: rgba(22, 33, 62, 0.85);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(15, 52, 96, 0.5);
+  border: 1px solid var(--border-secondary);
   border-radius: 10px;
   padding: 10px 14px;
   display: grid;
@@ -42,13 +42,13 @@
 
 .legend-desc {
   font-size: 11px;
-  color: #667;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
 .legend-hint {
   font-style: italic;
-  color: #556;
+  color: var(--text-faint);
 }
 
 .arrow-keys kbd {
@@ -60,6 +60,6 @@
 
 .legend-plus {
   font-size: 10px;
-  color: #445;
+  color: var(--text-dim);
   margin: 0 1px;
 }

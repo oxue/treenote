@@ -10,7 +10,7 @@
 
 .settings-label {
   font-size: 11px;
-  color: #667;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 600;
@@ -25,11 +25,11 @@
 .settings-path {
   flex: 1;
   font-size: 14px;
-  color: #8892a4;
-  background: rgba(13, 13, 26, 0.5);
+  color: var(--text-secondary);
+  background: var(--bg-input-solid);
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(15, 52, 96, 0.4);
+  border: 1px solid var(--border-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -53,14 +53,14 @@
   flex-direction: column;
   gap: 3px;
   font-size: 12px;
-  color: #667;
+  color: var(--text-muted);
 }
 
 .settings-physics-field input {
-  background: rgba(13, 13, 26, 0.5);
-  border: 1px solid rgba(15, 52, 96, 0.4);
+  background: var(--bg-input-solid);
+  border: 1px solid var(--border-tertiary);
   border-radius: 6px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   padding: 6px 8px;
   font-size: 13px;
   font-family: inherit;
@@ -70,18 +70,18 @@
 
 .settings-physics-field input:focus {
   outline: none;
-  border-color: #e94560;
-  box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg-light);
 }
 
 .settings-save-btn {
-  background: linear-gradient(135deg, #e94560, #d63851) !important;
-  border-color: #e94560 !important;
+  background: var(--accent-gradient) !important;
+  border-color: var(--accent) !important;
   color: #fff !important;
   font-weight: 600 !important;
 }
 
 .settings-save-btn:hover {
-  background: linear-gradient(135deg, #ff5577, #e94560) !important;
-  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.2) !important;
+  background: var(--accent-gradient-hover) !important;
+  box-shadow: 0 4px 12px var(--accent-glow-strong) !important;
 }

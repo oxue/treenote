@@ -1,0 +1,332 @@
+/* ===== Treenote Color Themes ===== */
+
+:root,
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #0d0d1a;
+  --bg-secondary: rgba(22, 33, 62, 0.6);
+  --bg-secondary-solid: #16213e;
+  --bg-tertiary: #1a1a2e;
+  --bg-input: rgba(26, 26, 46, 0.6);
+  --bg-input-solid: rgba(13, 13, 26, 0.5);
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+  --bg-overlay-light: rgba(0, 0, 0, 0.5);
+  --bg-panel: rgba(22, 33, 62, 0.95);
+  --bg-hover: rgba(15, 52, 96, 0.5);
+  --bg-hover-light: rgba(15, 52, 96, 0.15);
+  --bg-code: rgba(15, 52, 96, 0.6);
+  --bg-code-block: rgba(15, 52, 96, 0.4);
+  --bg-dot-grid: rgba(255, 255, 255, 0.015);
+
+  /* Borders */
+  --border-primary: #0f3460;
+  --border-secondary: rgba(15, 52, 96, 0.6);
+  --border-tertiary: rgba(15, 52, 96, 0.4);
+  --border-subtle: rgba(15, 52, 96, 0.25);
+  --border-faint: rgba(15, 52, 96, 0.3);
+
+  /* Text */
+  --text-primary: #e0e0e0;
+  --text-secondary: #8892a4;
+  --text-muted: #667;
+  --text-faint: #556;
+  --text-dim: #445;
+  --text-ghost: #3a3a5a;
+  --text-dark: #2a2a3a;
+  --text-strong: #fff;
+
+  /* Accent */
+  --accent: #e94560;
+  --accent-hover: #ff5577;
+  --accent-bg: rgba(233, 69, 96, 0.15);
+  --accent-bg-light: rgba(233, 69, 96, 0.1);
+  --accent-bg-faint: rgba(233, 69, 96, 0.05);
+  --accent-border: rgba(233, 69, 96, 0.3);
+  --accent-border-light: rgba(233, 69, 96, 0.2);
+  --accent-glow: rgba(233, 69, 96, 0.12);
+  --accent-glow-strong: rgba(233, 69, 96, 0.2);
+  --accent-gradient: linear-gradient(135deg, #e94560, #d63851);
+  --accent-gradient-hover: linear-gradient(135deg, #ff5577, #e94560);
+  --accent-gradient-text: linear-gradient(135deg, #e94560, #ff6b81);
+
+  /* Status colors */
+  --success: #4ade80;
+  --link: #5b9bd5;
+  --link-hover: #7bb8e8;
+  --link-underline: rgba(91, 155, 213, 0.3);
+  --link-underline-hover: rgba(123, 184, 232, 0.6);
+
+  /* Node */
+  --node-bg: rgba(22, 33, 62, 0.6);
+  --node-bg-hover: rgba(22, 33, 62, 0.8);
+  --node-bg-selected: rgba(26, 26, 62, 0.8);
+  --node-bg-editing: rgba(26, 26, 62, 0.9);
+  --node-border: rgba(15, 52, 96, 0.6);
+  --node-border-hover: rgba(233, 69, 96, 0.4);
+
+  /* Child / Parent node variants */
+  --child-bg: rgba(22, 33, 62, 0.4);
+  --child-border: rgba(15, 52, 96, 0.4);
+  --parent-bg: rgba(22, 33, 62, 0.3);
+  --parent-border: rgba(15, 52, 96, 0.3);
+
+  /* Queue */
+  --queue-bg: rgba(22, 33, 62, 0.6);
+  --queue-border: rgba(15, 52, 96, 0.5);
+
+  /* Badge / chip */
+  --badge-bg: rgba(15, 52, 96, 0.5);
+  --badge-text: #6b8bb8;
+  --badge-border: rgba(15, 52, 96, 0.4);
+
+  /* Keycap */
+  --kbd-bg-start: rgba(42, 42, 74, 0.8);
+  --kbd-bg-end: rgba(26, 26, 58, 0.8);
+  --kbd-border: rgba(58, 58, 90, 0.6);
+  --kbd-border-bottom: rgba(42, 42, 58, 0.8);
+  --kbd-shadow: rgba(0, 0, 0, 0.3);
+  --kbd-highlight: rgba(255, 255, 255, 0.04);
+  --kbd-text: #8892a4;
+
+  /* Mode indicator */
+  --mode-visual-bg: rgba(15, 52, 96, 0.6);
+  --mode-visual-text: #6b8bb8;
+  --mode-visual-border: rgba(15, 52, 96, 0.8);
+
+  /* Line gradient SVG */
+  --line-color: #e94560;
+
+  /* Markdown */
+  --md-hr: #333;
+
+  /* Deadline/calendar specifics */
+  --deadline-default-bg: rgba(15, 52, 96, 0.5);
+  --deadline-default-text: #6b8bb8;
+  --deadline-default-border: rgba(15, 52, 96, 0.4);
+  --cal-cell-hover: rgba(26, 42, 78, 0.6);
+
+  /* Scrollbar (for Firefox) */
+  --scrollbar-width: none;
+
+  /* Ambient glow on login */
+  --login-glow: rgba(233, 69, 96, 0.06);
+  --login-radial-edge: #0d0d1a;
+}
+
+[data-theme="midnight"] {
+  /* Backgrounds */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: rgba(16, 24, 48, 0.7);
+  --bg-secondary-solid: #101830;
+  --bg-tertiary: #121a30;
+  --bg-input: rgba(14, 18, 36, 0.7);
+  --bg-input-solid: rgba(8, 10, 22, 0.6);
+  --bg-overlay: rgba(0, 0, 0, 0.75);
+  --bg-overlay-light: rgba(0, 0, 0, 0.55);
+  --bg-panel: rgba(16, 24, 48, 0.97);
+  --bg-hover: rgba(30, 50, 100, 0.5);
+  --bg-hover-light: rgba(30, 50, 100, 0.15);
+  --bg-code: rgba(20, 40, 80, 0.6);
+  --bg-code-block: rgba(20, 40, 80, 0.4);
+  --bg-dot-grid: rgba(100, 140, 255, 0.012);
+
+  /* Borders */
+  --border-primary: #1a3060;
+  --border-secondary: rgba(30, 60, 120, 0.6);
+  --border-tertiary: rgba(30, 60, 120, 0.4);
+  --border-subtle: rgba(30, 60, 120, 0.25);
+  --border-faint: rgba(30, 60, 120, 0.3);
+
+  /* Text */
+  --text-primary: #d4dae8;
+  --text-secondary: #7e8ba8;
+  --text-muted: #586888;
+  --text-faint: #4a5a78;
+  --text-dim: #3a4a68;
+  --text-ghost: #2a3a58;
+  --text-dark: #1e2a48;
+  --text-strong: #eef2ff;
+
+  /* Accent — more blue-purple tint */
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-bg: rgba(99, 102, 241, 0.15);
+  --accent-bg-light: rgba(99, 102, 241, 0.1);
+  --accent-bg-faint: rgba(99, 102, 241, 0.05);
+  --accent-border: rgba(99, 102, 241, 0.3);
+  --accent-border-light: rgba(99, 102, 241, 0.2);
+  --accent-glow: rgba(99, 102, 241, 0.12);
+  --accent-glow-strong: rgba(99, 102, 241, 0.2);
+  --accent-gradient: linear-gradient(135deg, #6366f1, #4f46e5);
+  --accent-gradient-hover: linear-gradient(135deg, #818cf8, #6366f1);
+  --accent-gradient-text: linear-gradient(135deg, #6366f1, #a5b4fc);
+
+  /* Status colors */
+  --success: #34d399;
+  --link: #60a5fa;
+  --link-hover: #93c5fd;
+  --link-underline: rgba(96, 165, 250, 0.3);
+  --link-underline-hover: rgba(147, 197, 253, 0.6);
+
+  /* Node */
+  --node-bg: rgba(16, 24, 48, 0.7);
+  --node-bg-hover: rgba(20, 30, 60, 0.85);
+  --node-bg-selected: rgba(20, 26, 60, 0.85);
+  --node-bg-editing: rgba(20, 26, 60, 0.95);
+  --node-border: rgba(30, 60, 120, 0.6);
+  --node-border-hover: rgba(99, 102, 241, 0.4);
+
+  /* Child / Parent node variants */
+  --child-bg: rgba(16, 24, 48, 0.5);
+  --child-border: rgba(30, 60, 120, 0.4);
+  --parent-bg: rgba(16, 24, 48, 0.35);
+  --parent-border: rgba(30, 60, 120, 0.3);
+
+  /* Queue */
+  --queue-bg: rgba(16, 24, 48, 0.7);
+  --queue-border: rgba(30, 60, 120, 0.5);
+
+  /* Badge / chip */
+  --badge-bg: rgba(30, 60, 120, 0.5);
+  --badge-text: #6b8bd8;
+  --badge-border: rgba(30, 60, 120, 0.4);
+
+  /* Keycap */
+  --kbd-bg-start: rgba(30, 40, 70, 0.8);
+  --kbd-bg-end: rgba(18, 26, 50, 0.8);
+  --kbd-border: rgba(50, 60, 100, 0.6);
+  --kbd-border-bottom: rgba(35, 45, 70, 0.8);
+  --kbd-shadow: rgba(0, 0, 0, 0.35);
+  --kbd-highlight: rgba(150, 180, 255, 0.04);
+  --kbd-text: #7e8ba8;
+
+  /* Mode indicator */
+  --mode-visual-bg: rgba(30, 60, 120, 0.6);
+  --mode-visual-text: #6b8bd8;
+  --mode-visual-border: rgba(30, 60, 120, 0.8);
+
+  /* Line gradient SVG */
+  --line-color: #6366f1;
+
+  /* Markdown */
+  --md-hr: #2a3a58;
+
+  /* Deadline/calendar specifics */
+  --deadline-default-bg: rgba(30, 60, 120, 0.5);
+  --deadline-default-text: #6b8bd8;
+  --deadline-default-border: rgba(30, 60, 120, 0.4);
+  --cal-cell-hover: rgba(30, 50, 100, 0.6);
+
+  /* Ambient glow on login */
+  --login-glow: rgba(99, 102, 241, 0.06);
+  --login-radial-edge: #0a0e1a;
+}
+
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-primary: #f8f9fc;
+  --bg-secondary: rgba(235, 238, 248, 0.8);
+  --bg-secondary-solid: #ebeef8;
+  --bg-tertiary: #f0f2f8;
+  --bg-input: rgba(240, 242, 250, 0.9);
+  --bg-input-solid: rgba(245, 246, 252, 0.9);
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+  --bg-overlay-light: rgba(0, 0, 0, 0.15);
+  --bg-panel: rgba(255, 255, 255, 0.97);
+  --bg-hover: rgba(100, 120, 180, 0.1);
+  --bg-hover-light: rgba(100, 120, 180, 0.06);
+  --bg-code: rgba(100, 120, 180, 0.1);
+  --bg-code-block: rgba(100, 120, 180, 0.07);
+  --bg-dot-grid: rgba(0, 0, 0, 0.02);
+
+  /* Borders */
+  --border-primary: #d0d5e2;
+  --border-secondary: rgba(180, 190, 215, 0.6);
+  --border-tertiary: rgba(180, 190, 215, 0.4);
+  --border-subtle: rgba(180, 190, 215, 0.3);
+  --border-faint: rgba(180, 190, 215, 0.25);
+
+  /* Text */
+  --text-primary: #1a1d2e;
+  --text-secondary: #5a6278;
+  --text-muted: #7a8298;
+  --text-faint: #9098ae;
+  --text-dim: #a0a8be;
+  --text-ghost: #b8bece;
+  --text-dark: #c8cede;
+  --text-strong: #000;
+
+  /* Accent — slightly adjusted for light backgrounds */
+  --accent: #e03050;
+  --accent-hover: #c8283f;
+  --accent-bg: rgba(224, 48, 80, 0.1);
+  --accent-bg-light: rgba(224, 48, 80, 0.06);
+  --accent-bg-faint: rgba(224, 48, 80, 0.03);
+  --accent-border: rgba(224, 48, 80, 0.25);
+  --accent-border-light: rgba(224, 48, 80, 0.15);
+  --accent-glow: rgba(224, 48, 80, 0.08);
+  --accent-glow-strong: rgba(224, 48, 80, 0.12);
+  --accent-gradient: linear-gradient(135deg, #e03050, #c42840);
+  --accent-gradient-hover: linear-gradient(135deg, #c42840, #b02038);
+  --accent-gradient-text: linear-gradient(135deg, #e03050, #f05070);
+
+  /* Status colors */
+  --success: #16a34a;
+  --link: #2563eb;
+  --link-hover: #1d4ed8;
+  --link-underline: rgba(37, 99, 235, 0.25);
+  --link-underline-hover: rgba(29, 78, 216, 0.4);
+
+  /* Node */
+  --node-bg: rgba(255, 255, 255, 0.8);
+  --node-bg-hover: rgba(255, 255, 255, 0.95);
+  --node-bg-selected: rgba(255, 255, 255, 1);
+  --node-bg-editing: rgba(255, 255, 255, 1);
+  --node-border: rgba(180, 190, 215, 0.5);
+  --node-border-hover: rgba(224, 48, 80, 0.35);
+
+  /* Child / Parent node variants */
+  --child-bg: rgba(240, 242, 250, 0.7);
+  --child-border: rgba(180, 190, 215, 0.35);
+  --parent-bg: rgba(240, 242, 250, 0.5);
+  --parent-border: rgba(180, 190, 215, 0.3);
+
+  /* Queue */
+  --queue-bg: rgba(255, 255, 255, 0.8);
+  --queue-border: rgba(180, 190, 215, 0.5);
+
+  /* Badge / chip */
+  --badge-bg: rgba(100, 120, 180, 0.1);
+  --badge-text: #4a5a88;
+  --badge-border: rgba(180, 190, 215, 0.4);
+
+  /* Keycap */
+  --kbd-bg-start: rgba(240, 242, 250, 0.9);
+  --kbd-bg-end: rgba(230, 232, 244, 0.9);
+  --kbd-border: rgba(190, 198, 218, 0.7);
+  --kbd-border-bottom: rgba(180, 188, 208, 0.8);
+  --kbd-shadow: rgba(0, 0, 0, 0.06);
+  --kbd-highlight: rgba(255, 255, 255, 0.8);
+  --kbd-text: #5a6278;
+
+  /* Mode indicator */
+  --mode-visual-bg: rgba(100, 120, 180, 0.12);
+  --mode-visual-text: #4a5a88;
+  --mode-visual-border: rgba(100, 120, 180, 0.25);
+
+  /* Line gradient SVG */
+  --line-color: #e03050;
+
+  /* Markdown */
+  --md-hr: #d0d5e2;
+
+  /* Deadline/calendar specifics */
+  --deadline-default-bg: rgba(100, 120, 180, 0.1);
+  --deadline-default-text: #4a5a88;
+  --deadline-default-border: rgba(180, 190, 215, 0.4);
+  --cal-cell-hover: rgba(100, 120, 180, 0.12);
+
+  /* Ambient glow on login */
+  --login-glow: rgba(224, 48, 80, 0.04);
+  --login-radial-edge: #f8f9fc;
+}

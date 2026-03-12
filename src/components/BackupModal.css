@@ -18,25 +18,25 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: rgba(13, 13, 26, 0.5);
-  border: 1px solid rgba(15, 52, 96, 0.4);
+  background: var(--bg-input-solid);
+  border: 1px solid var(--border-tertiary);
   border-radius: 8px;
   transition: border-color 0.15s;
 }
 
 .backup-row:hover {
-  border-color: rgba(15, 52, 96, 0.8);
+  border-color: var(--border-secondary);
 }
 
 .backup-date {
   font-size: 13px;
-  color: #8892a4;
+  color: var(--text-secondary);
 }
 
 .backup-restore-btn {
-  background: rgba(233, 69, 96, 0.15) !important;
-  border-color: rgba(233, 69, 96, 0.3) !important;
-  color: #e94560 !important;
+  background: var(--accent-bg) !important;
+  border-color: var(--accent-border) !important;
+  color: var(--accent) !important;
   font-size: 12px !important;
   padding: 4px 12px !important;
   border-radius: 6px !important;
@@ -44,7 +44,7 @@
 }
 
 .backup-restore-btn:hover {
-  background: rgba(233, 69, 96, 0.25) !important;
+  background: var(--accent-bg-light) !important;
 }
 
 .backup-actions {
@@ -55,7 +55,7 @@
 
 .backup-loading,
 .backup-empty {
-  color: #667;
+  color: var(--text-muted);
   font-size: 14px;
   padding: 16px 0;
   text-align: center;

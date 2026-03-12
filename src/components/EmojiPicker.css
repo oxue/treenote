@@ -1,10 +1,10 @@
 .emoji-picker {
   position: absolute;
   z-index: 1000;
-  background: rgba(22, 33, 62, 0.95);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(15, 52, 96, 0.5);
+  border: 1px solid var(--border-secondary);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   width: 240px;
@@ -29,13 +29,13 @@
   gap: 8px;
   padding: 7px 12px;
   cursor: pointer;
-  color: #e0e0e0;
+  color: var(--text-primary);
   transition: background 0.1s;
 }
 
 .emoji-picker-item:hover,
 .emoji-picker-item.selected {
-  background: rgba(15, 52, 96, 0.5);
+  background: var(--bg-hover);
 }
 
 .emoji-picker-emoji {
@@ -45,5 +45,5 @@
 
 .emoji-picker-code {
   font-size: 0.85em;
-  color: #667;
+  color: var(--text-muted);
 }

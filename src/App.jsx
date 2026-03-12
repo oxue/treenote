@@ -31,6 +31,7 @@ import WebSettingsPanel from './components/WebSettingsPanel';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
 import { marked } from 'marked';
+import './theme.css';
 import './App.css';
 import './components/deadline.css';
 
@@ -58,16 +59,15 @@ export default function App({ session }) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarFeedOpen, setCalendarFeedOpen] = useState(false);
   const [legendVisible, setLegendVisible] = useState(true);
+  const [webSettingsOpen, setWebSettingsOpen] = useState(false);
   const [emojiPicker, setEmojiPicker] = useState({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
+  const { settings, updateSettings } = useSettings();
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
   const queueEditRef = useRef(null);
   const fileInputRef = useRef(null);
   const loadedRef = useRef(false);
   const versionRef = useRef(0);
-
-  const { settings, updateSettings } = useSettings();
-  const [webSettingsOpen, setWebSettingsOpen] = useState(false);
 
   const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex, focus);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
@@ -674,8 +674,8 @@ export default function App({ session }) {
                 <svg className="lines-svg" ref={leftSvgRef}>
                   <defs>
                     <linearGradient id="lineGradLeft" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#e94560" stopOpacity="0.15" />
-                      <stop offset="100%" stopColor="#e94560" stopOpacity="0.4" />
+                      <stop offset="0%" stopColor="var(--line-color)" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="var(--line-color)" stopOpacity="0.4" />
                     </linearGradient>
                     <filter id="lineGlow">
                       <feGaussianBlur stdDeviation="2" result="blur" />
@@ -799,8 +799,8 @@ export default function App({ session }) {
                 <svg className="lines-svg" ref={rightSvgRef}>
                   <defs>
                     <linearGradient id="lineGradRight" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#e94560" stopOpacity="0.5" />
-                      <stop offset="100%" stopColor="#e94560" stopOpacity="0.2" />
+                      <stop offset="0%" stopColor="var(--line-color)" stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="var(--line-color)" stopOpacity="0.2" />
                     </linearGradient>
                   </defs>
                   {rightLines.map((l, i) => (
@@ -934,8 +934,30 @@ export default function App({ session }) {
       {webSettingsOpen && (
         <WebSettingsPanel
           onClose={() => setWebSettingsOpen(false)}
-          keybindingScheme={settings.keybindingScheme}
-          onChangeScheme={(scheme) => updateSettings({ keybindingScheme: scheme })}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          electronSettings={window.treenote ? settingsInitial : null}
+          onSaveElectronSettings={window.treenote ? ({ path: filePath, physics: newPhysics }) => {
+            setPhysics(newPhysics);
+            window.treenote.saveSettings({ defaultFile: filePath, physics: newPhysics }).then((ok) => {
+              if (ok) {
+                setWebSettingsOpen(false);
+                setToast('Settings saved');
+                setTimeout(() => setToast(null), 1000);
+                window.treenote.getDefaultFile().then((content) => {
+                  if (content) {
+                    const parsed = parseTree(content);
+                    ensureIds(parsed);
+                    setTree(parsed);
+                    setPath([]);
+                    setSelectedIndex(0);
+                    setUndoStack([]);
+                    setRedoStack([]);
+                  }
+                });
+              }
+            });
+          } : null}
         />
       )}
       {legendVisible && <HotkeyLegend mode={mode} focus={focus} keybindingScheme={settings.keybindingScheme} />}

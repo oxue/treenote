@@ -58,6 +58,9 @@ export default function useKeyboard({
       // Calendar feed modal is open — let the component handle keys
       if (calendarFeedOpen) return;
 
+      // Web settings panel — Panel handles its own keyboard events
+      if (webSettingsOpen) return;
+
       // Conflict modal — 1/2/3 to resolve
       if (conflict) {
         e.preventDefault();
@@ -80,14 +83,6 @@ export default function useKeyboard({
         if (e.key === 'Escape') {
           e.preventDefault();
           setBackupOpen(false);
-        }
-        return;
-      }
-
-      if (webSettingsOpen) {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setWebSettingsOpen(false);
         }
         return;
       }
@@ -264,6 +259,10 @@ export default function useKeyboard({
           case 'f':
             e.preventDefault();
             setCalendarFeedOpen(true);
+            break;
+          case 's':
+            e.preventDefault();
+            setWebSettingsOpen(true);
             break;
           case 'z':
           case 'Z':
