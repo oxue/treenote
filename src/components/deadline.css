@@ -282,3 +282,38 @@
 .priority-value.medium { background: #4a3a1a; color: #fbbf24; }
 .priority-value.high { background: #4a2a1a; color: #fb923c; }
 .priority-value.urgent { background: #4a1a2a; color: #f87171; }
+
+/* ===== Time / Duration Picker ===== */
+.time-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time-option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, color 0.1s;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-option:hover {
+  background: #1a2a4e;
+  color: #aaa;
+}
+
+.time-option.cursor {
+  background: #0f3460;
+  color: #e0e0e0;
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 #e94560;
+}
+
+.time-option.current {
+  color: #7bb8e8;
+  font-weight: 600;
+}
