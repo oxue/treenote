@@ -661,6 +661,7 @@ export default function App({ session }) {
                         onInput={(e) => {
                           e.target.style.height = 'auto';
                           e.target.style.height = e.target.scrollHeight + 'px';
+                          updateEmojiPicker(e.target);
                         }}
                         onKeyDown={(e) => {
                           if (emojiPicker.visible) {

@@ -19,6 +19,7 @@
   "description": "",
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
+    "gemoji": "^8.1.0",
     "js-yaml": "^4.1.1",
     "marked": "^17.0.4",
     "react": "^19.2.4",
