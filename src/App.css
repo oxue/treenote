@@ -202,7 +202,7 @@ body {
 }
 
 /* Markdown rendered content */
-.node-markdown { white-space: normal; }
+.node-markdown { white-space: normal; display: block; }
 .node-markdown p { margin: 0 0 0.5em; }
 .node-markdown p:last-child { margin-bottom: 0; }
 .node-markdown h1, .node-markdown h2, .node-markdown h3 { margin: 0 0 0.3em; color: #e94560; }
@@ -217,6 +217,7 @@ body {
 .node-markdown a { color: #5b9bd5; text-decoration: underline; }
 .node-markdown ul, .node-markdown ol { margin: 0.3em 0; padding-left: 1.5em; }
 .node-markdown blockquote { border-left: 3px solid #e94560; padding-left: 10px; margin: 0.3em 0; color: #aaa; }
+.node-markdown hr { border: none; border-top: 1px solid #555; margin: 0.5em 0; width: 100%; }
 
 .markdown-badge {
   font-size: 9px;
