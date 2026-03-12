@@ -486,7 +486,7 @@ export default function App({ session }) {
 
   return (
     <div className="app" onClick={(e) => {
-      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box')) {
+      if (mode === 'edit' && focus === 'queue' && !e.target.closest('.queue-box') && !e.target.closest('.queue-card')) {
         if (queueEditRef.current) {
           const newText = queueEditRef.current.value.trim();
           const item = queue[queueIndex];
@@ -581,6 +581,9 @@ export default function App({ session }) {
             const found = findNodeById(tree, item.nodeId);
             if (found) applyAction(editNodeText(tree, found.path, found.index, text));
           }
+        }}
+        onUpdateDetails={(i, details) => {
+          setQueue(q => q.map((it, idx) => idx === i ? { ...it, details } : it));
         }}
         onExitEdit={() => setMode('visual')}
       />
