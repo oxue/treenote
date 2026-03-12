@@ -134,25 +134,49 @@ body {
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 13px;
   color: #556;
   flex-wrap: wrap;
+  animation: breadcrumb-enter 0.3s ease;
+}
+
+@keyframes breadcrumb-enter {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .breadcrumb-item {
   color: #556;
   transition: color 0.2s;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb-item:hover {
+  color: #8892a4;
+  background: rgba(15, 52, 96, 0.3);
 }
 
 .breadcrumb-item.current {
   color: #e94560;
   font-weight: 500;
+  cursor: default;
+}
+
+.breadcrumb-item.current:hover {
+  background: none;
 }
 
 .breadcrumb-separator {
-  color: #333;
+  color: #2a2a3a;
   font-size: 10px;
+  user-select: none;
 }
 
 /* ===== Columns Layout ===== */
@@ -236,6 +260,12 @@ body {
   background: rgba(26, 26, 62, 0.8);
   box-shadow: 0 0 20px rgba(233, 69, 96, 0.12), inset 0 0 0 1px rgba(233, 69, 96, 0.05);
   border-left: 3px solid #e94560;
+  animation: node-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards, selected-glow 3s ease-in-out infinite;
+}
+
+@keyframes selected-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(233, 69, 96, 0.10), inset 0 0 0 1px rgba(233, 69, 96, 0.05); }
+  50% { box-shadow: 0 0 28px rgba(233, 69, 96, 0.18), inset 0 0 0 1px rgba(233, 69, 96, 0.08); }
 }
 
 .node-box.editing {

@@ -573,7 +573,24 @@ export default function App({ session }) {
             {breadcrumb.map((crumb, i) => (
               <span key={i}>
                 {i > 0 && <span className="breadcrumb-separator"> &gt; </span>}
-                <span className={`breadcrumb-item ${i === breadcrumb.length - 1 ? 'current' : ''}`}>
+                <span
+                  className={`breadcrumb-item ${i === breadcrumb.length - 1 ? 'current' : ''}`}
+                  onClick={() => {
+                    if (i < breadcrumb.length - 1) {
+                      if (mode === 'edit') exitEditMode();
+                      const newPath = path.slice(0, i);
+                      const newSelected = path[i];
+                      if (i === breadcrumb.length - 2) {
+                        // One level up -- animate
+                        slideNavigate('left', newPath, newSelected);
+                      } else {
+                        // Multiple levels -- jump directly
+                        setPath(newPath);
+                        setSelectedIndex(newSelected);
+                      }
+                    }
+                  }}
+                >
                   {crumb}
                 </span>
               </span>
