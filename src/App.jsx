@@ -611,9 +611,15 @@ export default function App({ session }) {
       />
 
       {!tree ? (
-        <div className="empty-state">Load a markdown file to get started</div>
+        <div className="empty-state">
+          <span className="empty-state-icon">&#9776;</span>
+          <span>Load a file to get started</span>
+        </div>
       ) : currentNodes.length === 0 ? (
-        <div className="empty-state">No children (press Left to go back)</div>
+        <div className="empty-state">
+          <span className="empty-state-icon">&#8592;</span>
+          <span>Empty node &mdash; press <kbd>Left</kbd> to go back</span>
+        </div>
       ) : (
         <div className="columns-viewport">
           <div className="columns" ref={sliderRef}>
@@ -642,14 +648,27 @@ export default function App({ session }) {
                   ))}
                 </div>
                 <svg className="lines-svg" ref={leftSvgRef}>
+                  <defs>
+                    <linearGradient id="lineGradLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#e94560" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="#e94560" stopOpacity="0.4" />
+                    </linearGradient>
+                    <filter id="lineGlow">
+                      <feGaussianBlur stdDeviation="2" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
                   {leftLines.map((l, i) => (
                     <path
                       key={i}
                       d={`M 0 ${l.startY} C 30 ${l.startY}, 30 ${l.endY}, 60 ${l.endY}`}
-                      stroke="#e94560"
+                      stroke="url(#lineGradLeft)"
                       strokeWidth="1.5"
                       fill="none"
-                      opacity="0.35"
+                      filter="url(#lineGlow)"
                     />
                   ))}
                 </svg>
@@ -754,14 +773,20 @@ export default function App({ session }) {
             {childNodes.length > 0 && (
               <>
                 <svg className="lines-svg" ref={rightSvgRef}>
+                  <defs>
+                    <linearGradient id="lineGradRight" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#e94560" stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="#e94560" stopOpacity="0.2" />
+                    </linearGradient>
+                  </defs>
                   {rightLines.map((l, i) => (
                     <path
                       key={i}
                       d={`M 0 ${l.startY} C 30 ${l.startY}, 30 ${l.endY}, 60 ${l.endY}`}
-                      stroke="#e94560"
+                      stroke="url(#lineGradRight)"
                       strokeWidth="1.5"
                       fill="none"
-                      opacity="0.5"
+                      filter="url(#lineGlow)"
                     />
                   ))}
                 </svg>
