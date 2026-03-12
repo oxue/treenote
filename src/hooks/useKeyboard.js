@@ -28,6 +28,7 @@ export default function useKeyboard({
   calendarOpen, setCalendarOpen,
   calendarFeedOpen, setCalendarFeedOpen,
   setLegendVisible,
+  webSettingsOpen, setWebSettingsOpen,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -59,6 +60,12 @@ export default function useKeyboard({
         if (e.key === '1') onConflictKeepMine();
         else if (e.key === '2') onConflictKeepTheirs();
         else if (e.key === '3') onConflictKeepBoth();
+        return;
+      }
+
+      // Web settings panel — Escape or s closes it
+      if (webSettingsOpen) {
+        // Panel handles its own keyboard events
         return;
       }
 
@@ -249,6 +256,10 @@ export default function useKeyboard({
             e.preventDefault();
             setLegendVisible(v => !v);
             break;
+          case 's':
+            e.preventDefault();
+            setWebSettingsOpen(true);
+            break;
           case 'z':
           case 'Z':
             e.preventDefault();
@@ -395,10 +406,14 @@ export default function useKeyboard({
           e.preventDefault();
           setLegendVisible(v => !v);
           break;
+        case 's':
+          e.preventDefault();
+          setWebSettingsOpen(true);
+          break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, webSettingsOpen, setWebSettingsOpen]);
 }

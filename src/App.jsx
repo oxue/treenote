@@ -20,12 +20,14 @@ import QueueBar from './components/QueueBar';
 import DeadlineBadge from './components/DeadlineBadge';
 import MetadataPanel from './components/MetadataPanel';
 import CalendarFeedModal from './components/CalendarFeedModal';
+import WebSettingsPanel from './components/WebSettingsPanel';
 import EmojiPicker from './components/EmojiPicker';
 import { emojis as emojiList } from './emojiData';
 import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
 import useKeyboard from './hooks/useKeyboard';
+import useSettings from './hooks/useSettings';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
 import { marked } from 'marked';
@@ -56,6 +58,7 @@ export default function App({ session }) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarFeedOpen, setCalendarFeedOpen] = useState(false);
   const [legendVisible, setLegendVisible] = useState(true);
+  const [webSettingsOpen, setWebSettingsOpen] = useState(false);
   const [emojiPicker, setEmojiPicker] = useState({ visible: false, query: '', position: { top: 0, left: 0 }, selectedIdx: 0 });
   const editInputRef = useRef(null);
   const selectedNodeRef = useRef(null);
@@ -64,6 +67,7 @@ export default function App({ session }) {
   const loadedRef = useRef(false);
   const versionRef = useRef(0);
 
+  const { settings, updateSettings } = useSettings();
   const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex, focus);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
 
@@ -334,6 +338,7 @@ export default function App({ session }) {
     calendarOpen, setCalendarOpen,
     calendarFeedOpen, setCalendarFeedOpen,
     setLegendVisible,
+    webSettingsOpen, setWebSettingsOpen,
   });
 
   // Scroll selected item into view
@@ -543,16 +548,18 @@ export default function App({ session }) {
             <span className="save-dot" />Save
           </button>
         )}
-        {window.treenote?.getSettings && (
-          <button className="load-btn settings-btn" onClick={() => {
+        <button className="load-btn settings-btn" onClick={() => {
+          if (window.treenote?.getSettings) {
             window.treenote.getSettings().then((config) => {
               setSettingsInitial({ path: config.defaultFile || '', physics: config.physics || physics });
-              setSettingsOpen(true);
+              setWebSettingsOpen(true);
             });
-          }}>
-            &#9881;
-          </button>
-        )}
+          } else {
+            setWebSettingsOpen(true);
+          }
+        }}>
+          &#9881;
+        </button>
         {userId && (
           <button className="load-btn" onClick={() => supabase.auth.signOut()}>
             Logout
@@ -858,6 +865,35 @@ export default function App({ session }) {
         <ClearCheckedModal
           onConfirm={() => { const r = deleteCheckedNodes(tree, path, selectedIndex); if (r) applyAction(r); setClearCheckedConfirm(false); }}
           onCancel={() => setClearCheckedConfirm(false)}
+        />
+      )}
+      {webSettingsOpen && (
+        <WebSettingsPanel
+          onClose={() => setWebSettingsOpen(false)}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          electronSettings={window.treenote ? settingsInitial : null}
+          onSaveElectronSettings={window.treenote ? ({ path: filePath, physics: newPhysics }) => {
+            setPhysics(newPhysics);
+            window.treenote.saveSettings({ defaultFile: filePath, physics: newPhysics }).then((ok) => {
+              if (ok) {
+                setWebSettingsOpen(false);
+                setToast('Settings saved');
+                setTimeout(() => setToast(null), 1000);
+                window.treenote.getDefaultFile().then((content) => {
+                  if (content) {
+                    const parsed = parseTree(content);
+                    ensureIds(parsed);
+                    setTree(parsed);
+                    setPath([]);
+                    setSelectedIndex(0);
+                    setUndoStack([]);
+                    setRedoStack([]);
+                  }
+                });
+              }
+            });
+          } : null}
         />
       )}
       {settingsOpen && (

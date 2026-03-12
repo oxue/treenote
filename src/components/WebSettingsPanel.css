@@ -1,0 +1,228 @@
+.web-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 80px;
+  animation: ws-fade-in 0.15s ease;
+}
+
+@keyframes ws-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.web-settings-panel {
+  background: rgba(22, 33, 62, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(15, 52, 96, 0.6);
+  border-radius: 12px;
+  padding: 0;
+  min-width: 440px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  animation: ws-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes ws-slide-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.web-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.4);
+}
+
+.web-settings-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e0;
+  letter-spacing: 0.3px;
+}
+
+.web-settings-close-hint {
+  font-size: 11px;
+  color: #556;
+  letter-spacing: 0.5px;
+}
+
+.web-settings-close-hint kbd {
+  background: rgba(13, 13, 26, 0.6);
+  border: 1px solid rgba(15, 52, 96, 0.5);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #8892a4;
+  font-family: inherit;
+}
+
+.web-settings-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.3);
+}
+
+.web-settings-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #667;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.3px;
+}
+
+.web-settings-tab:hover {
+  color: #8892a4;
+  background: rgba(15, 52, 96, 0.15);
+}
+
+.web-settings-tab.active {
+  color: #e94560;
+  border-bottom-color: #e94560;
+}
+
+.web-settings-body {
+  padding: 20px;
+  min-height: 120px;
+}
+
+.web-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.web-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.web-settings-label {
+  font-size: 11px;
+  color: #667;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.web-settings-value {
+  font-size: 14px;
+  color: #8892a4;
+  background: rgba(13, 13, 26, 0.5);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 52, 96, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.web-settings-value .current-tag {
+  font-size: 10px;
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.web-settings-hint {
+  font-size: 12px;
+  color: #556;
+  font-style: italic;
+}
+
+/* Electron settings section */
+.web-settings-physics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.web-settings-physics-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #667;
+}
+
+.web-settings-physics-field input {
+  background: rgba(13, 13, 26, 0.5);
+  border: 1px solid rgba(15, 52, 96, 0.4);
+  border-radius: 6px;
+  color: #e0e0e0;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+.web-settings-physics-field input:focus {
+  outline: none;
+  border-color: #e94560;
+  box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.1);
+}
+
+.web-settings-file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.web-settings-path {
+  flex: 1;
+  font-size: 14px;
+  color: #8892a4;
+  background: rgba(13, 13, 26, 0.5);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 52, 96, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(15, 52, 96, 0.3);
+}
+
+.web-settings-save-btn {
+  background: linear-gradient(135deg, #e94560, #d63851) !important;
+  border-color: #e94560 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.web-settings-save-btn:hover {
+  background: linear-gradient(135deg, #ff5577, #e94560) !important;
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.2) !important;
+}
