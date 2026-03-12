@@ -13,31 +13,29 @@ export default function CalendarFeedModal({ userId, onClose }) {
     async function loadOrCreateFeed() {
       setLoading(true);
       // Check for existing feed
+      // Check for existing feed
       const { data: existing, error: fetchErr } = await supabase
         .from('calendar_feeds')
         .select('token')
         .eq('user_id', userId)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
-      if (fetchErr) {
-        setLoading(false);
-        return;
-      }
-
-      if (existing) {
+      if (!fetchErr && existing) {
         setFeedUrl(`${FEED_BASE_URL}?token=${existing.token}`);
         setLoading(false);
         return;
       }
 
-      // Create new feed
+      // Create new feed (upsert to handle race conditions)
       const { data: created, error: createErr } = await supabase
         .from('calendar_feeds')
-        .insert({ user_id: userId })
+        .upsert({ user_id: userId }, { onConflict: 'user_id' })
         .select('token')
         .single();
 
       if (createErr) {
+        console.error('[CalendarFeed] Error:', createErr);
         setLoading(false);
         return;
       }
