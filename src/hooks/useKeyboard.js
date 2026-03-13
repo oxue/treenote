@@ -21,7 +21,7 @@ import { isUp, isDown, isLeft, isRight, isVimNavKey, isToggleLegend } from '../k
 export default function useKeyboard({
   tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
   getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
-  focus, queue, queueIndex, pushUndo,
+  focus, queue, queueIndex, pushUndo, prepareSwap,
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
   onSave, setBackupOpen,
@@ -294,6 +294,7 @@ export default function useKeyboard({
           const result = moveToSibling(tree, path, selectedIndex, -1);
           if (result) applyAction(result);
         } else if (e.shiftKey) {
+          prepareSwap(selectedIndex, selectedIndex - 1);
           const result = swapUp(tree, path, selectedIndex);
           if (result) applyAction(result);
         } else {
@@ -318,6 +319,7 @@ export default function useKeyboard({
           const result = moveToSibling(tree, path, selectedIndex, 1);
           if (result) applyAction(result);
         } else if (e.shiftKey) {
+          prepareSwap(selectedIndex, selectedIndex + 1);
           const result = swapDown(tree, path, selectedIndex);
           if (result) applyAction(result);
         } else {

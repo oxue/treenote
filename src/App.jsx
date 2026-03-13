@@ -26,6 +26,7 @@ import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
 import useKeyboard from './hooks/useKeyboard';
+import useSwapAnimation from './hooks/useSwapAnimation';
 import useSettings from './hooks/useSettings';
 import WebSettingsPanel from './components/WebSettingsPanel';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
@@ -328,10 +329,12 @@ export default function App({ session }) {
     setRedoStack([]);
   }, [tree, path, selectedIndex, queue]);
 
+  const { prepareSwap } = useSwapAnimation(currentColRef);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
-    focus, queue, queueIndex, pushUndo,
+    focus, queue, queueIndex, pushUndo, prepareSwap,
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
