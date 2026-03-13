@@ -38,6 +38,52 @@ import './components/deadline.css';
 
 marked.setOptions({ breaks: true });
 
+function getDefaultTree() {
+  return [
+    { text: 'Welcome to Treenote', checked: false, children: [
+      { text: 'Navigation', checked: false, children: [
+        { text: 'Arrow keys or hjkl to move around', checked: false, children: [] },
+        { text: 'Right arrow drills into children', checked: false, children: [] },
+        { text: 'Left arrow goes back to parent', checked: false, children: [] },
+        { text: 'Arrow up at the top enters the queue', checked: false, children: [] },
+      ]},
+      { text: 'Editing', checked: false, children: [
+        { text: 'Enter to edit a node', checked: false, children: [] },
+        { text: 'Escape to save and exit edit mode', checked: false, children: [] },
+        { text: 'Type :emoji for emoji picker', checked: false, children: [] },
+      ]},
+      { text: 'Adding and removing', checked: false, children: [
+        { text: 'Cmd+Down to add a node below', checked: false, children: [] },
+        { text: 'Cmd+Up to add above', checked: false, children: [] },
+        { text: 'Cmd+Right to add a child', checked: false, children: [] },
+        { text: 'x to delete, c to check off', checked: false, children: [] },
+        { text: 'z to undo, Shift+Z to redo', checked: false, children: [] },
+      ]},
+      { text: 'Queue', checked: false, children: [
+        { text: 'Press q to send a node to the queue', checked: false, children: [] },
+        { text: 'Queue items appear at the top of the screen', checked: false, children: [] },
+        { text: 'Press c in the queue to check off (with physics!)', checked: false, children: [] },
+        { text: 'Shift+Left/Right to reorder queue items', checked: false, children: [] },
+      ]},
+      { text: 'Deadlines and metadata', checked: false, children: [
+        { text: 'Press d to set a deadline, time, duration, or priority', checked: false, children: [] },
+        { text: 'Tab switches between fields in the metadata panel', checked: false, children: [] },
+        { text: 'Press f to get a calendar feed URL for Google/Apple Calendar', checked: false, children: [] },
+      ]},
+      { text: 'Other features', checked: false, children: [
+        { text: 'Press m to toggle markdown rendering on a node', checked: false, children: [] },
+        { text: 'Press s to open settings (themes, keybindings)', checked: false, children: [] },
+        { text: 'Press b to open backup manager', checked: false, children: [] },
+        { text: 'Press l to toggle the hotkey legend', checked: false, children: [] },
+        { text: 'Cmd+S to save manually (auto-saves too)', checked: false, children: [] },
+      ]},
+    ]},
+    { text: 'My first project', checked: false, children: [
+      { text: 'Add your tasks here', checked: false, children: [] },
+    ]},
+  ];
+}
+
 export default function App({ session }) {
   const userId = session?.user?.id;
   const [tree, setTree] = useState(null);
@@ -384,11 +430,7 @@ export default function App({ session }) {
             // Save local data to cloud
             saveUserTree(userId, parsed).catch(() => {});
           } else {
-            const defaultTree = [{ text: 'Welcome to Treenote', checked: false, children: [
-              { text: 'Use arrow keys to navigate', checked: false, children: [] },
-              { text: 'Press Enter to edit', checked: false, children: [] },
-              { text: 'Press Cmd+Down to add items', checked: false, children: [] },
-            ]}];
+            const defaultTree = getDefaultTree();
             ensureIds(defaultTree);
             setTree(defaultTree);
           }
