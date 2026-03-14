@@ -5,6 +5,7 @@ const STORAGE_KEY = 'treenote-settings';
 const DEFAULT_SETTINGS = {
   keybindingScheme: 'arrows',
   theme: 'dark',
+  enterNewline: true,
 };
 
 function loadSettings() {

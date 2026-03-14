@@ -1,16 +1,21 @@
 import { getNavLabels } from '../keybindings';
 import './HotkeyLegend.css';
 
-export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
+export default function HotkeyLegend({ mode, focus, keybindingScheme, enterNewline }) {
   const isQueue = focus === 'queue';
   const nav = getNavLabels(keybindingScheme || 'arrows');
   const isVim = keybindingScheme === 'vim';
+
+  const exitKey = enterNewline ? 'Shift+Enter' : 'Enter';
+  const newlineKey = enterNewline ? 'Enter' : 'Shift+Enter';
 
   return (
     <div className="hotkey-legend">
       {mode === 'visual' ? (
         isQueue ? (
           <>
+            <div className="legend-category">Navigation</div>
+            <div className="legend-divider" />
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
                 <kbd>{nav.leftSymbol}</kbd>
@@ -18,6 +23,13 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
               </span>
               <span className="legend-desc">Navigate queue</span>
             </div>
+            <div className="legend-row">
+              <kbd>{nav.downSymbol}</kbd>
+              <span className="legend-desc">Back to tree</span>
+            </div>
+
+            <div className="legend-category">Queue Actions</div>
+            <div className="legend-divider" />
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
                 <kbd>&#8679;</kbd>
@@ -37,10 +49,6 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
               <span className="legend-desc">Insert temp card</span>
             </div>
             <div className="legend-row">
-              <kbd>{nav.downSymbol}</kbd>
-              <span className="legend-desc">Back to tree</span>
-            </div>
-            <div className="legend-row">
               <kbd>Enter</kbd>
               <span className="legend-desc">Edit item</span>
             </div>
@@ -56,6 +64,9 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
               <kbd>q</kbd>
               <span className="legend-desc">Jump to node</span>
             </div>
+
+            <div className="legend-category">Other</div>
+            <div className="legend-divider" />
             <div className="legend-row">
               <kbd>d</kbd>
               <span className="legend-desc">Deadline / metadata</span>
@@ -80,6 +91,8 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
           </>
         ) : (
           <>
+            <div className="legend-category">Navigation</div>
+            <div className="legend-divider" />
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
                 <kbd>{nav.upSymbol}</kbd>
@@ -98,6 +111,13 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
               </span>
               <span className="legend-desc">Swap node</span>
             </div>
+
+            <div className="legend-category">Editing</div>
+            <div className="legend-divider" />
+            <div className="legend-row">
+              <kbd>Enter</kbd>
+              <span className="legend-desc">Edit selected</span>
+            </div>
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
                 <kbd>&#8984;</kbd>
@@ -108,10 +128,6 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
                 <kbd>{nav.rightSymbol}</kbd>
               </span>
               <span className="legend-desc">Insert node</span>
-            </div>
-            <div className="legend-row">
-              <kbd>Enter</kbd>
-              <span className="legend-desc">Edit selected</span>
             </div>
             <div className="legend-row">
               <kbd>c</kbd>
@@ -133,10 +149,9 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
               </span>
               <span className="legend-desc">Redo</span>
             </div>
-            <div className="legend-row">
-              <kbd>m</kbd>
-              <span className="legend-desc">Toggle markdown</span>
-            </div>
+
+            <div className="legend-category">Queue & Metadata</div>
+            <div className="legend-divider" />
             <div className="legend-row">
               <kbd>q</kbd>
               <span className="legend-desc">Add to queue</span>
@@ -148,6 +163,13 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
             <div className="legend-row">
               <kbd>f</kbd>
               <span className="legend-desc">Calendar feed</span>
+            </div>
+
+            <div className="legend-category">Other</div>
+            <div className="legend-divider" />
+            <div className="legend-row">
+              <kbd>m</kbd>
+              <span className="legend-desc">Toggle markdown</span>
             </div>
             <div className="legend-row">
               <span className="legend-keys arrow-keys">
@@ -178,12 +200,18 @@ export default function HotkeyLegend({ mode, focus, keybindingScheme }) {
         )
       ) : (
         <>
+          <div className="legend-category">Edit Mode</div>
+          <div className="legend-divider" />
           <div className="legend-row">
             <kbd>Esc</kbd>
-            <span className="legend-desc">Confirm &amp; exit</span>
+            <span className="legend-desc">Confirm & exit</span>
           </div>
           <div className="legend-row">
-            <kbd>Enter</kbd>
+            <kbd>{exitKey}</kbd>
+            <span className="legend-desc">Confirm & exit</span>
+          </div>
+          <div className="legend-row">
+            <kbd>{newlineKey}</kbd>
             <span className="legend-desc">New line</span>
           </div>
         </>

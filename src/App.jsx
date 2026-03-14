@@ -808,6 +808,23 @@ export default function App({ session }) {
                               return;
                             }
                           }
+                          if (e.key === 'Enter' && settings.enterNewline) {
+                            if (e.shiftKey) {
+                              e.preventDefault();
+                              commitEdit(e.target.value);
+                              e.stopPropagation();
+                              return;
+                            }
+                            // Enter without shift = newline (default textarea behavior)
+                          } else if (e.key === 'Enter' && !settings.enterNewline) {
+                            if (!e.shiftKey) {
+                              e.preventDefault();
+                              commitEdit(e.target.value);
+                              e.stopPropagation();
+                              return;
+                            }
+                            // Shift+Enter = newline (default textarea behavior)
+                          }
                           if (e.key === 'Escape') {
                             e.preventDefault();
                             commitEdit(e.target.value);
@@ -1007,7 +1024,7 @@ export default function App({ session }) {
           } : null}
         />
       )}
-      {legendVisible && <HotkeyLegend mode={mode} focus={focus} keybindingScheme={settings.keybindingScheme} />}
+      {legendVisible && <HotkeyLegend mode={mode} focus={focus} keybindingScheme={settings.keybindingScheme} enterNewline={settings.enterNewline} />}
     </div>
   );
 }

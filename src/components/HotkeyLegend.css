@@ -3,6 +3,7 @@
   position: fixed;
   bottom: 16px;
   left: 16px;
+  min-width: 260px;
   background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -26,6 +27,27 @@
 
 .hotkey-legend:hover {
   opacity: 1;
+}
+
+.legend-category {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.legend-category:first-child {
+  margin-top: 0;
+}
+
+.legend-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--border-secondary);
+  margin-bottom: 2px;
 }
 
 .legend-row {
