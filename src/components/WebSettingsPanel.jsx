@@ -162,6 +162,30 @@ export default function WebSettingsPanel({
           Arrow keys continue to work alongside hjkl.
         </div>
       )}
+
+      <div className="enter-behavior-section">
+        <span className="web-settings-label">Enter key in edit mode</span>
+        <div className="enter-behavior-toggle">
+          <label className={`enter-option ${settings.enterNewline ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="enterBehavior"
+              checked={settings.enterNewline}
+              onChange={() => onUpdateSettings({ enterNewline: true })}
+            />
+            <span className="enter-option-label">Enter = new line, Shift+Enter = exit</span>
+          </label>
+          <label className={`enter-option ${!settings.enterNewline ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="enterBehavior"
+              checked={!settings.enterNewline}
+              onChange={() => onUpdateSettings({ enterNewline: false })}
+            />
+            <span className="enter-option-label">Enter = exit, Shift+Enter = new line</span>
+          </label>
+        </div>
+      </div>
     </div>
   );
 

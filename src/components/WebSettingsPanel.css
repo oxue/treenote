@@ -389,3 +389,49 @@
   background: var(--accent-gradient-hover) !important;
   box-shadow: 0 4px 12px var(--accent-glow-strong) !important;
 }
+
+/* ===== Enter Behavior Toggle ===== */
+.enter-behavior-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.enter-behavior-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.enter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-tertiary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.enter-option:hover {
+  border-color: var(--border-secondary);
+  background: var(--bg-hover-light);
+}
+
+.enter-option.active {
+  border-color: var(--accent);
+  background: var(--accent-bg-light, rgba(233, 69, 96, 0.06));
+}
+
+.enter-option input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+.enter-option-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
