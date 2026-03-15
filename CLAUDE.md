@@ -28,6 +28,7 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 
 ### Area docs
 - `docs/keybindings.md` — keyboard handling: design philosophy, module structure, key reference, rules for modifying.
+- `docs/autofix.md` — autofix pipeline: daemon, fix-issue script, label lifecycle, video proof, retry logic.
 
 ### Maintenance rules
 1. **Before touching an area**: read its area doc if one exists.
@@ -54,5 +55,6 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 
 - `scripts/fix-issue.sh <N>` — fix a GitHub issue in a worktree
 - `scripts/autofix-daemon.sh` — polls for `autofix`-labeled issues
-- Labels: `autofix`, `in-progress`, `pr-pending`
+- `scripts/autofix-launchd.sh start|stop|status|logs` — run daemon as persistent macOS service
+- Labels: `autofix`, `in-progress`, `pr-pending`, `needs-human`
 - Video proof: Playwright records tests, ffmpeg converts to gif, uploaded as GitHub release assets
