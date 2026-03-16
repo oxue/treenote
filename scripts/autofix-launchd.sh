@@ -11,7 +11,9 @@ set -euo pipefail
 
 LABEL="com.treenote.autofix"
 PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Always resolve to the MAIN repo root, even if invoked from a worktree.
+# `git worktree list` always lists the main worktree first.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && git worktree list --porcelain | head -1 | sed 's/^worktree //')"
 LOG_FILE="$HOME/.treenote-autofix.log"
 
 case "${1:-}" in

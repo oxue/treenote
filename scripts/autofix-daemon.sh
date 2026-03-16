@@ -5,7 +5,8 @@ set -euo pipefail
 # Usage: ./scripts/autofix-daemon.sh
 # Run in tmux: tmux new-window -n autofix './scripts/autofix-daemon.sh'
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Always resolve to the MAIN repo root, even if invoked from a worktree.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && git worktree list --porcelain | head -1 | sed 's/^worktree //')"
 INTERVAL=600 # 10m
 LOG_FILE="${HOME}/.treenote-autofix.log"
 
@@ -14,7 +15,8 @@ cd "$REPO_ROOT"
 # Logging helper
 log() {
   local msg="[$(date '+%Y-%m-%d %H:%M:%S')] [daemon] $*"
-  echo "$msg"
+  # Write to log file only. Stdout also goes to log file via launchd,
+  # so echoing to both would double every line.
   echo "$msg" >> "$LOG_FILE"
 }
 

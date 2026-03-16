@@ -9,7 +9,8 @@ set -euo pipefail
 
 ISSUE_NUM="${1:?Usage: fix-issue.sh <issue-number> [--watch|--pr|--cleanup]}"
 MODE="${2:-headless}"
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Always resolve to the MAIN repo root, even if invoked from a worktree.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && git worktree list --porcelain | head -1 | sed 's/^worktree //')"
 BRANCH="fix/issue-${ISSUE_NUM}"
 LOG_FILE="${HOME}/.treenote-autofix.log"
 
@@ -20,10 +21,10 @@ STUCK_TIMEOUT=600
 
 cd "$REPO_ROOT"
 
-# Logging helper — writes to stdout and to log file
+# Logging helper — writes to log file only.
+# When called by daemon, stdout also goes to log file via tee, so we only write once.
 log() {
   local msg="[$(date '+%Y-%m-%d %H:%M:%S')] [issue-${ISSUE_NUM}] $*"
-  echo "$msg"
   echo "$msg" >> "$LOG_FILE"
 }
 
@@ -44,7 +45,7 @@ upload_video_proof() {
   local pr_number="$1"
   local worktree_path="$2"
 
-  VIDEO_FILES=$(find "$worktree_path" -path '*/test-results/*' -name '*.webm' 2>/dev/null || true)
+  VIDEO_FILES=$(find "$worktree_path" -path '*/test-results/*' -name '*.webm' >/dev/null 2>&1 || true)
   if [ -z "$VIDEO_FILES" ]; then
     log "No video recordings found."
     return
@@ -135,7 +136,7 @@ create_pr() {
 The agent created a worktree but did not commit any changes.
 "
     # Check if there were uncommitted changes that failed to commit
-    UNCOMMITTED=$(cd "$worktree_path" && git status --porcelain 2>/dev/null || true)
+    UNCOMMITTED=$(cd "$worktree_path" && git status --porcelain >/dev/null 2>&1 || true)
     if [ -n "$UNCOMMITTED" ]; then
       NO_COMMIT_BODY+="
 Uncommitted files found in worktree:
@@ -154,8 +155,8 @@ ${SAVED_CLAUDE_RESULT}
 \`\`\`
 </details>"
     fi
-    gh issue comment "$ISSUE_NUM" --body "$NO_COMMIT_BODY" --repo "oxue/treenote" 2>/dev/null || true
-    gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
+    gh issue comment "$ISSUE_NUM" --body "$NO_COMMIT_BODY" --repo "oxue/treenote" >/dev/null 2>&1 || true
+    gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
     exit 1
   fi
 
@@ -164,7 +165,7 @@ ${SAVED_CLAUDE_RESULT}
   git push -u origin "worktree-${BRANCH}" 2>/dev/null || git push -u origin HEAD
 
   # Check if PR already exists
-  EXISTING_PR=$(gh pr list --head "worktree-${BRANCH}" --json url --jq '.[0].url' --repo "oxue/treenote" 2>/dev/null || true)
+  EXISTING_PR=$(gh pr list --head "worktree-${BRANCH}" --json url --jq '.[0].url' --repo "oxue/treenote" >/dev/null 2>&1 || true)
   if [ -n "$EXISTING_PR" ]; then
     log "PR already exists: $EXISTING_PR (pushed latest changes)"
     PR_URL="$EXISTING_PR"
@@ -188,7 +189,7 @@ ${ISSUE_BODY}" \
   upload_video_proof "$PR_NUMBER" "$worktree_path"
 
   # Update labels
-  gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --add-label "pr-pending" --repo "oxue/treenote" 2>/dev/null || true
+  gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --add-label "pr-pending" --repo "oxue/treenote" >/dev/null 2>&1 || true
 
   log "Done! Issue #${ISSUE_NUM} → ${PR_URL}"
   log "Worktree at: ${worktree_path}"
@@ -201,10 +202,10 @@ if [ "$MODE" = "--cleanup" ]; then
     log "No worktree found at ${WORKTREE_PATH}"
     exit 0
   fi
-  PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" 2>/dev/null || true)
+  PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" >/dev/null 2>&1 || true)
   if [ "$PR_STATE" = "MERGED" ]; then
     git worktree remove "$WORKTREE_PATH" --force
-    git branch -D "worktree-${BRANCH}" 2>/dev/null || true
+    git branch -D "worktree-${BRANCH}" >/dev/null 2>&1 || true
     log "Cleaned up worktree and branch for issue #${ISSUE_NUM}."
   else
     log "PR not merged yet — keeping worktree."
@@ -230,17 +231,17 @@ if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
   log "Issue #${ISSUE_NUM} has already been retried ${RETRY_COUNT} times (max ${MAX_RETRIES}). Marking as needs-human."
   gh issue comment "$ISSUE_NUM" \
     --body "Autofix agent failed after ${RETRY_COUNT} attempts. Marking for human review." \
-    --repo "oxue/treenote" 2>/dev/null || true
+    --repo "oxue/treenote" >/dev/null 2>&1 || true
   gh issue edit "$ISSUE_NUM" \
     --remove-label "in-progress" \
     --remove-label "autofix" \
     --add-label "needs-human" \
-    --repo "oxue/treenote" 2>/dev/null || true
+    --repo "oxue/treenote" >/dev/null 2>&1 || true
   exit 1
 fi
 
 # Label as in-progress
-gh issue edit "$ISSUE_NUM" --add-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
+gh issue edit "$ISSUE_NUM" --add-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
 
 # Build the prompt
 PROMPT="You are fixing a bug in the treenote project.
@@ -314,10 +315,10 @@ copy_env() {
 NEXT_RETRY=$((RETRY_COUNT + 1))
 # Remove old retry label if present, add new one
 if [ "$RETRY_COUNT" -gt 0 ]; then
-  gh issue edit "$ISSUE_NUM" --remove-label "retry-${RETRY_COUNT}" --repo "oxue/treenote" 2>/dev/null || true
+  gh issue edit "$ISSUE_NUM" --remove-label "retry-${RETRY_COUNT}" --repo "oxue/treenote" >/dev/null 2>&1 || true
 fi
 if [ "$NEXT_RETRY" -le "$MAX_RETRIES" ]; then
-  gh issue edit "$ISSUE_NUM" --add-label "retry-${NEXT_RETRY}" --repo "oxue/treenote" 2>/dev/null || true
+  gh issue edit "$ISSUE_NUM" --add-label "retry-${NEXT_RETRY}" --repo "oxue/treenote" >/dev/null 2>&1 || true
 fi
 
 # Run Claude in a worktree
@@ -327,7 +328,7 @@ if [ "$MODE" = "--watch" ]; then
   PROMPT_FILE=$(mktemp)
   printf '%s' "$PROMPT" > "$PROMPT_FILE"
   # Copy .env after a short delay to let worktree be created
-  (sleep 5 && cp "$REPO_ROOT/.env" "$REPO_ROOT/.claude/worktrees/${BRANCH}/.env" 2>/dev/null || true) &
+  (sleep 5 && cp "$REPO_ROOT/.env" "$REPO_ROOT/.claude/worktrees/${BRANCH}/.env" >/dev/null 2>&1 || true) &
   tmux new-window -n "fix-#${ISSUE_NUM}" \
     "cd '$REPO_ROOT' && claude --worktree '$BRANCH' --dangerously-skip-permissions \"\$(cat '$PROMPT_FILE')\"; rm -f '$PROMPT_FILE'"
   log "Opened in tmux window 'fix-#${ISSUE_NUM}'."
@@ -335,7 +336,7 @@ if [ "$MODE" = "--watch" ]; then
   exit 0
 else
   # Headless mode: run with timeout + stuck-detection
-  CONVERSATION_LOG=$(mktemp /tmp/claude-issue-${ISSUE_NUM}-XXXXXX.log)
+  CONVERSATION_LOG=$(mktemp /tmp/claude-issue-${ISSUE_NUM}-XXXXXX)
   CLAUDE_PID=""
   TIMED_OUT=false
 
@@ -358,9 +359,9 @@ else
     # Hard timeout
     if [ "$ELAPSED" -ge "$CLAUDE_TIMEOUT" ]; then
       log "Claude PID ${CLAUDE_PID} exceeded hard timeout (${CLAUDE_TIMEOUT}s). Killing."
-      kill "$CLAUDE_PID" 2>/dev/null || true
+      kill "$CLAUDE_PID" >/dev/null 2>&1 || true
       sleep 2
-      kill -9 "$CLAUDE_PID" 2>/dev/null || true
+      kill -9 "$CLAUDE_PID" >/dev/null 2>&1 || true
       TIMED_OUT=true
       break
     fi
@@ -372,9 +373,9 @@ else
       IDLE=$((NOW - LAST_MODIFIED))
       if [ "$IDLE" -ge "$STUCK_TIMEOUT" ]; then
         log "Claude PID ${CLAUDE_PID} has been idle for ${IDLE}s (no log activity). Treating as stuck."
-        kill "$CLAUDE_PID" 2>/dev/null || true
+        kill "$CLAUDE_PID" >/dev/null 2>&1 || true
         sleep 2
-        kill -9 "$CLAUDE_PID" 2>/dev/null || true
+        kill -9 "$CLAUDE_PID" >/dev/null 2>&1 || true
         TIMED_OUT=true
         break
       fi
@@ -382,16 +383,16 @@ else
   done
 
   # Wait for Claude to fully exit and capture exit code
-  wait "$CLAUDE_PID" 2>/dev/null || true
+  wait "$CLAUDE_PID" >/dev/null 2>&1 || true
 
   # Extract Claude's final result text from JSON output
   CLAUDE_RESULT=""
   if [ -f "$CONVERSATION_LOG" ] && [ -s "$CONVERSATION_LOG" ]; then
     # --output-format json produces a JSON object with a "result" field containing Claude's final response
-    CLAUDE_RESULT=$(jq -r '.result // empty' "$CONVERSATION_LOG" 2>/dev/null || true)
+    CLAUDE_RESULT=$(jq -r '.result // empty' "$CONVERSATION_LOG" >/dev/null 2>&1 || true)
     # If no .result field, try to get the raw text (fallback for non-JSON output)
     if [ -z "$CLAUDE_RESULT" ]; then
-      CLAUDE_RESULT=$(tail -100 "$CONVERSATION_LOG" 2>/dev/null || true)
+      CLAUDE_RESULT=$(tail -100 "$CONVERSATION_LOG" >/dev/null 2>&1 || true)
     fi
     # Truncate to 3000 chars to fit in a GitHub comment
     if [ ${#CLAUDE_RESULT} -gt 3000 ]; then
@@ -417,8 +418,8 @@ ${CLAUDE_RESULT}
     fi
     gh issue comment "$ISSUE_NUM" \
       --body "$TIMEOUT_BODY" \
-      --repo "oxue/treenote" 2>/dev/null || true
-    gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
+      --repo "oxue/treenote" >/dev/null 2>&1 || true
+    gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
     rm -f "$CONVERSATION_LOG"
     exit 1
   fi
@@ -447,8 +448,8 @@ ${SAVED_CLAUDE_RESULT}
 \`\`\`
 </details>"
   fi
-  gh issue comment "$ISSUE_NUM" --body "$NO_WT_BODY" --repo "oxue/treenote" 2>/dev/null || true
-  gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
+  gh issue comment "$ISSUE_NUM" --body "$NO_WT_BODY" --repo "oxue/treenote" >/dev/null 2>&1 || true
+  gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
   exit 1
 fi
 
