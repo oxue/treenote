@@ -130,7 +130,31 @@ create_pr() {
   COMMITS_AHEAD=$(git rev-list --count master..HEAD 2>/dev/null || echo "0")
   if [ "$COMMITS_AHEAD" -eq 0 ]; then
     log "No commits to push."
-    gh issue comment "$ISSUE_NUM" --body "Autofix agent ran but produced no changes. Manual review needed." --repo "oxue/treenote" 2>/dev/null || true
+    NO_COMMIT_BODY="### Autofix agent ran but produced no commits
+
+The agent created a worktree but did not commit any changes.
+"
+    # Check if there were uncommitted changes that failed to commit
+    UNCOMMITTED=$(cd "$worktree_path" && git status --porcelain 2>/dev/null || true)
+    if [ -n "$UNCOMMITTED" ]; then
+      NO_COMMIT_BODY+="
+Uncommitted files found in worktree:
+\`\`\`
+${UNCOMMITTED}
+\`\`\`
+"
+    fi
+    if [ -n "${SAVED_CLAUDE_RESULT:-}" ]; then
+      NO_COMMIT_BODY+="
+<details>
+<summary>Agent output</summary>
+
+\`\`\`
+${SAVED_CLAUDE_RESULT}
+\`\`\`
+</details>"
+    fi
+    gh issue comment "$ISSUE_NUM" --body "$NO_COMMIT_BODY" --repo "oxue/treenote" 2>/dev/null || true
     gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
     exit 1
   fi
@@ -360,16 +384,47 @@ else
   # Wait for Claude to fully exit and capture exit code
   wait "$CLAUDE_PID" 2>/dev/null || true
 
+  # Extract Claude's final result text from JSON output
+  CLAUDE_RESULT=""
+  if [ -f "$CONVERSATION_LOG" ] && [ -s "$CONVERSATION_LOG" ]; then
+    # --output-format json produces a JSON object with a "result" field containing Claude's final response
+    CLAUDE_RESULT=$(jq -r '.result // empty' "$CONVERSATION_LOG" 2>/dev/null || true)
+    # If no .result field, try to get the raw text (fallback for non-JSON output)
+    if [ -z "$CLAUDE_RESULT" ]; then
+      CLAUDE_RESULT=$(tail -100 "$CONVERSATION_LOG" 2>/dev/null || true)
+    fi
+    # Truncate to 3000 chars to fit in a GitHub comment
+    if [ ${#CLAUDE_RESULT} -gt 3000 ]; then
+      CLAUDE_RESULT="${CLAUDE_RESULT:0:3000}... (truncated)"
+    fi
+  fi
+
   if [ "$TIMED_OUT" = true ]; then
     log "Claude timed out for issue #${ISSUE_NUM}."
+    TIMEOUT_BODY="### Autofix agent timed out
+
+Exceeded ${CLAUDE_TIMEOUT}s limit (attempt $((RETRY_COUNT + 1)) of $((MAX_RETRIES + 1))).
+"
+    if [ -n "$CLAUDE_RESULT" ]; then
+      TIMEOUT_BODY+="
+<details>
+<summary>Agent output before timeout</summary>
+
+\`\`\`
+${CLAUDE_RESULT}
+\`\`\`
+</details>"
+    fi
     gh issue comment "$ISSUE_NUM" \
-      --body "Autofix agent timed out (${CLAUDE_TIMEOUT}s limit). Will retry automatically (attempt $((RETRY_COUNT + 1)) of $((MAX_RETRIES + 1)))." \
+      --body "$TIMEOUT_BODY" \
       --repo "oxue/treenote" 2>/dev/null || true
     gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
     rm -f "$CONVERSATION_LOG"
     exit 1
   fi
 
+  # Save result for later use in failure reporting
+  SAVED_CLAUDE_RESULT="$CLAUDE_RESULT"
   rm -f "$CONVERSATION_LOG"
   copy_env
 fi
@@ -378,7 +433,21 @@ fi
 WORKTREE_PATH="$REPO_ROOT/.claude/worktrees/${BRANCH}"
 if [ ! -d "$WORKTREE_PATH" ]; then
   log "No worktree created — Claude may not have made changes."
-  gh issue comment "$ISSUE_NUM" --body "Autofix agent ran but did not produce changes. Manual review needed." --repo "oxue/treenote" 2>/dev/null || true
+  NO_WT_BODY="### Autofix agent produced no changes
+
+No worktree was created. The agent may have failed to understand the issue or encountered an error.
+"
+  if [ -n "${SAVED_CLAUDE_RESULT:-}" ]; then
+    NO_WT_BODY+="
+<details>
+<summary>Agent output</summary>
+
+\`\`\`
+${SAVED_CLAUDE_RESULT}
+\`\`\`
+</details>"
+  fi
+  gh issue comment "$ISSUE_NUM" --body "$NO_WT_BODY" --repo "oxue/treenote" 2>/dev/null || true
   gh issue edit "$ISSUE_NUM" --remove-label "in-progress" --repo "oxue/treenote" 2>/dev/null || true
   exit 1
 fi
