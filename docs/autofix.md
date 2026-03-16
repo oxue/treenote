@@ -50,6 +50,24 @@ tmux new-window -n autofix './scripts/autofix-daemon.sh'
 
 Log file: `~/.treenote-autofix.log`
 
+## Worktree Cleanup
+
+### Automatic (in daemon loop)
+Every poll cycle, the daemon checks `fix/issue-*` worktrees. If the corresponding PR is merged, it removes the worktree and branch automatically.
+
+### Manual (interactive)
+```bash
+./scripts/autofix-launchd.sh cleanup
+```
+This auto-removes merged issue worktrees, then lists non-issue worktrees (agent-*, feat-*) and lets you pick which to remove interactively.
+
+### What's safe to auto-clean
+- `fix/issue-*` — created by the autofix pipeline, tied to a PR. Safe to remove once merged.
+
+### What requires manual review
+- `agent-*` — sub-agent worktrees from Claude Code sessions. May contain uncommitted work.
+- `feat/*` — manual feature branches. May be in-progress.
+
 ## Rules for Modifying
 - The prompt template in `fix-issue.sh` (lines ~222-279) tells Claude what to do. Update it if you add new conventions (e.g., new test patterns, new file locations).
 - If you change the Playwright test mock pattern, update both the prompt template and the existing test files.

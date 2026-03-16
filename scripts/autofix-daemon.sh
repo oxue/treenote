@@ -68,8 +68,38 @@ recover_stale_inprogress() {
   done <<< "$INPROGRESS"
 }
 
-# Run recovery once at startup to handle any issues left over from a previous daemon run
+# --- Cleanup: remove worktrees for merged issue PRs ---
+cleanup_merged_worktrees() {
+  log "Checking for merged worktrees to clean up..."
+
+  # Only auto-clean fix/issue-* worktrees (autofix pipeline).
+  # agent-* and feat-* worktrees are manual — skip them.
+  for wt_path in "$REPO_ROOT"/.claude/worktrees/fix/issue-*; do
+    [ -d "$wt_path" ] || continue
+
+    issue_num=$(basename "$wt_path" | sed 's/issue-//')
+    BRANCH="fix/issue-${issue_num}"
+
+    # Check if the PR branch has been merged
+    PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" 2>/dev/null || true)
+    if [ "$PR_STATE" = "MERGED" ]; then
+      log "Cleanup: issue #${issue_num} PR is merged — removing worktree and branch."
+      git worktree remove "$wt_path" --force 2>/dev/null || {
+        log "Cleanup: failed to remove worktree at ${wt_path}, trying rm."
+        rm -rf "$wt_path"
+        git worktree prune 2>/dev/null || true
+      }
+      git branch -D "worktree-${BRANCH}" 2>/dev/null || true
+    fi
+  done
+
+  # Prune any stale worktree references
+  git worktree prune 2>/dev/null || true
+}
+
+# Run recovery and cleanup once at startup
 recover_stale_inprogress
+cleanup_merged_worktrees
 
 while true; do
   log ""
@@ -96,6 +126,7 @@ while true; do
   log "Sleeping ${INTERVAL}s until next poll..."
   sleep "$INTERVAL"
 
-  # Run recovery check each cycle too, in case something got stuck mid-cycle
+  # Run recovery and cleanup each cycle
   recover_stale_inprogress
+  cleanup_merged_worktrees
 done
