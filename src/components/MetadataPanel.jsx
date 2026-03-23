@@ -265,90 +265,106 @@ export default function MetadataPanel({ node, onSetDeadline, onSetPriority, onSe
       </div>
 
       {/* Calendar / Date */}
-      <div className={`meta-field ${activeField === 'deadline' ? 'active' : ''}`}>
+      <div className={`meta-field ${activeField === 'deadline' ? 'active' : ''}`} onClick={() => setActiveField('deadline')}>
         <div className="meta-field-label">
           Deadline
           {node?.deadline && <span className="meta-field-value">{node.deadline}</span>}
         </div>
-        <div className="cal-header-panel">
-          <span className="cal-month">{monthName}</span>
-        </div>
-        <div className="cal-weekdays">
-          {DAYS.map(d => <div key={d} className="cal-weekday">{d}</div>)}
-        </div>
-        <div className="cal-grid">
-          {cells}
-        </div>
-        <div className="meta-field-actions">
-          <kbd>Enter</kbd> set &nbsp; <kbd>Del</kbd> clear
-        </div>
+        {activeField === 'deadline' && (
+          <>
+            <div className="cal-header-panel">
+              <span className="cal-month">{monthName}</span>
+            </div>
+            <div className="cal-weekdays">
+              {DAYS.map(d => <div key={d} className="cal-weekday">{d}</div>)}
+            </div>
+            <div className="cal-grid">
+              {cells}
+            </div>
+            <div className="meta-field-actions">
+              <kbd>Enter</kbd> set &nbsp; <kbd>Del</kbd> clear
+            </div>
+          </>
+        )}
       </div>
 
       {/* Time picker */}
-      <div className={`meta-field ${activeField === 'time' ? 'active' : ''}`}>
+      <div className={`meta-field ${activeField === 'time' ? 'active' : ''}`} onClick={() => setActiveField('time')}>
         <div className="meta-field-label">
           Time
           {node?.deadlineTime && <span className="meta-field-value">{formatTime12h(node.deadlineTime)}</span>}
         </div>
-        <div className="time-picker">
-          {visibleTimeSlots.map(({ index, time, isCursor }) => (
-            <div
-              key={index}
-              className={`time-option ${isCursor && activeField === 'time' ? 'cursor' : ''} ${time === node?.deadlineTime ? 'current' : ''}`}
-              onClick={() => onSetTime(time)}
-            >
-              {formatTime12h(time)}
+        {activeField === 'time' && (
+          <>
+            <div className="time-picker">
+              {visibleTimeSlots.map(({ index, time, isCursor }) => (
+                <div
+                  key={index}
+                  className={`time-option ${isCursor ? 'cursor' : ''} ${time === node?.deadlineTime ? 'current' : ''}`}
+                  onClick={() => onSetTime(time)}
+                >
+                  {formatTime12h(time)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="meta-field-actions">
-          <kbd>&uarr;</kbd><kbd>&darr;</kbd> 15min &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> 1hr &nbsp; <kbd>Enter</kbd> set
-        </div>
+            <div className="meta-field-actions">
+              <kbd>&uarr;</kbd><kbd>&darr;</kbd> 15min &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> 1hr &nbsp; <kbd>Enter</kbd> set
+            </div>
+          </>
+        )}
       </div>
 
       {/* Duration picker */}
-      <div className={`meta-field ${activeField === 'duration' ? 'active' : ''}`}>
+      <div className={`meta-field ${activeField === 'duration' ? 'active' : ''}`} onClick={() => setActiveField('duration')}>
         <div className="meta-field-label">
           Duration
           {node?.deadlineDuration && <span className="meta-field-value">{formatDuration(node.deadlineDuration)}</span>}
         </div>
-        <div className="time-picker">
-          {visibleDurationSlots.map(({ index, value, isCursor }) => (
-            <div
-              key={index}
-              className={`time-option ${isCursor && activeField === 'duration' ? 'cursor' : ''} ${value === node?.deadlineDuration ? 'current' : ''}`}
-              onClick={() => onSetDuration(value)}
-            >
-              {formatDuration(value)}
+        {activeField === 'duration' && (
+          <>
+            <div className="time-picker">
+              {visibleDurationSlots.map(({ index, value, isCursor }) => (
+                <div
+                  key={index}
+                  className={`time-option ${isCursor ? 'cursor' : ''} ${value === node?.deadlineDuration ? 'current' : ''}`}
+                  onClick={() => onSetDuration(value)}
+                >
+                  {formatDuration(value)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="meta-field-actions">
-          <kbd>&uarr;</kbd><kbd>&darr;</kbd> 15min &nbsp; <kbd>Enter</kbd> set
-        </div>
+            <div className="meta-field-actions">
+              <kbd>&uarr;</kbd><kbd>&darr;</kbd> 15min &nbsp; <kbd>Enter</kbd> set
+            </div>
+          </>
+        )}
       </div>
 
       {/* Priority */}
-      <div className={`meta-field ${activeField === 'priority' ? 'active' : ''}`}>
+      <div className={`meta-field ${activeField === 'priority' ? 'active' : ''}`} onClick={() => setActiveField('priority')}>
         <div className="meta-field-label">
           Priority
           {node?.priority && <span className={`priority-value ${node.priority}`}>{PRIORITY_LABELS[node.priority]}</span>}
         </div>
-        <div className="priority-list">
-          {PRIORITIES.map((p, i) => (
-            <div
-              key={i}
-              className={`priority-option ${i === priorityIndex && activeField === 'priority' ? 'cursor' : ''} ${p === node?.priority ? 'current' : ''}`}
-              onClick={() => onSetPriority(p)}
-            >
-              <span className={`priority-dot ${p || 'none'}`} />
-              <span>{p ? PRIORITY_LABELS[p] : 'None'}</span>
+        {activeField === 'priority' && (
+          <>
+            <div className="priority-list">
+              {PRIORITIES.map((p, i) => (
+                <div
+                  key={i}
+                  className={`priority-option ${i === priorityIndex ? 'cursor' : ''} ${p === node?.priority ? 'current' : ''}`}
+                  onClick={() => onSetPriority(p)}
+                >
+                  <span className={`priority-dot ${p || 'none'}`} />
+                  <span>{p ? PRIORITY_LABELS[p] : 'None'}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="meta-field-actions">
-          <kbd>&uarr;</kbd><kbd>&darr;</kbd> select &nbsp; <kbd>Enter</kbd> set
-        </div>
+            <div className="meta-field-actions">
+              <kbd>&uarr;</kbd><kbd>&darr;</kbd> select &nbsp; <kbd>Enter</kbd> set
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
