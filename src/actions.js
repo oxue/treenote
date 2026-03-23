@@ -22,8 +22,10 @@ function getNodeAt(tree, path, index) {
   return getNodesAt(tree, path)[index];
 }
 
-function newNode(text = '') {
-  return { text, checked: false, children: [], id: generateId() };
+function newNode(text = '', opts = {}) {
+  const node = { text, checked: false, children: [], id: generateId() };
+  if (opts.markdown) node.markdown = true;
+  return node;
 }
 
 // Add IDs to any nodes that don't have one (migration for existing data)
@@ -60,25 +62,25 @@ export function editNodeText(tree, path, selectedIndex, newText) {
 }
 
 // Insert a sibling below the selected node
-export function insertSiblingBelow(tree, path, selectedIndex) {
+export function insertSiblingBelow(tree, path, selectedIndex, opts) {
   const newTree = cloneTree(tree);
   const siblings = getNodesAt(newTree, path);
-  siblings.splice(selectedIndex + 1, 0, newNode());
+  siblings.splice(selectedIndex + 1, 0, newNode('', opts));
   return { tree: newTree, path, selectedIndex: selectedIndex + 1 };
 }
 
 // Insert a sibling above the selected node
-export function insertSiblingAbove(tree, path, selectedIndex) {
+export function insertSiblingAbove(tree, path, selectedIndex, opts) {
   const newTree = cloneTree(tree);
   const siblings = getNodesAt(newTree, path);
-  siblings.splice(selectedIndex, 0, newNode());
+  siblings.splice(selectedIndex, 0, newNode('', opts));
   return { tree: newTree, path, selectedIndex };
 }
 
 // Insert a node between the selected node and its parent
 // The new node takes the selected node's place in the parent's children,
 // and the selected node becomes a child of the new node
-export function insertParent(tree, path, selectedIndex) {
+export function insertParent(tree, path, selectedIndex, opts) {
   if (path.length === 0) return null; // no parent to insert between at root
   const newTree = cloneTree(tree);
   const parentPath = path.slice(0, -1);
@@ -87,7 +89,7 @@ export function insertParent(tree, path, selectedIndex) {
   const currentParent = parentSiblings[parentIdx];
 
   // Create new intermediate node that takes over current parent's children
-  const intermediate = newNode();
+  const intermediate = newNode('', opts);
   intermediate.children = currentParent.children;
   currentParent.children = [intermediate];
 
@@ -101,11 +103,11 @@ export function insertParent(tree, path, selectedIndex) {
 // Insert a node between the selected node and its children
 // The new node becomes the only child of the selected node,
 // and the selected node's old children become children of the new node
-export function insertChild(tree, path, selectedIndex) {
+export function insertChild(tree, path, selectedIndex, opts) {
   const newTree = cloneTree(tree);
   const node = getNodeAt(newTree, path, selectedIndex);
 
-  const intermediate = newNode();
+  const intermediate = newNode('', opts);
   intermediate.children = node.children;
   node.children = [intermediate];
 
