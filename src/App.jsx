@@ -390,6 +390,7 @@ export default function App({ session }) {
     setLegendVisible,
     keybindingScheme: settings.keybindingScheme,
     webSettingsOpen, setWebSettingsOpen,
+    defaultMarkdown: settings.defaultMarkdown,
   });
 
   // Scroll selected item into view
