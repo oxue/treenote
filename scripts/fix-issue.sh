@@ -1,23 +1,25 @@
 #!/bin/bash
 set -euo pipefail
 
-# Usage: ./scripts/fix-issue.sh <issue-number> [--watch|--pr|--cleanup]
+# Usage: ./scripts/fix-issue.sh <issue-number> [--watch|--pr|--cleanup|--revise]
 # Picks up a GitHub issue, spawns Claude in a worktree to fix it, and creates a PR.
 # --watch:   opens Claude in a new tmux window so you can watch it work
 # --pr:      commits, pushes, and creates PR from an existing worktree (use after --watch)
 # --cleanup: removes worktree and branch if the PR has been merged
+# --revise:  apply revision feedback from issue comments on top of existing worktree
 
 ISSUE_NUM="${1:?Usage: fix-issue.sh <issue-number> [--watch|--pr|--cleanup]}"
 MODE="${2:-headless}"
 # Always resolve to the MAIN repo root, even if invoked from a worktree.
 REPO_ROOT="$(cd "$(dirname "$0")/.." && git worktree list --porcelain | head -1 | sed 's/^worktree //')"
-BRANCH="fix/issue-${ISSUE_NUM}"
+BRANCH="fix-issue-${ISSUE_NUM}"
 LOG_FILE="${HOME}/.treenote-autofix.log"
 
 # Max time to wait for Claude to finish (30 minutes)
 CLAUDE_TIMEOUT=1800
-# If no activity in conversation log for this many seconds, consider stuck
-STUCK_TIMEOUT=600
+
+# Only process issues from trusted users (prompt injection defense)
+ALLOWED_AUTHORS="oxue"
 
 cd "$REPO_ROOT"
 
@@ -30,11 +32,19 @@ log() {
 
 # Fetch issue details
 log "Fetching issue #${ISSUE_NUM}..."
-ISSUE_JSON=$(gh issue view "$ISSUE_NUM" --json title,body,labels)
+ISSUE_JSON=$(gh issue view "$ISSUE_NUM" --json title,body,labels,author)
 ISSUE_TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
 ISSUE_BODY=$(echo "$ISSUE_JSON" | jq -r '.body')
+ISSUE_AUTHOR=$(echo "$ISSUE_JSON" | jq -r '.author.login')
 
-log "Issue: $ISSUE_TITLE"
+log "Issue: $ISSUE_TITLE (by $ISSUE_AUTHOR)"
+
+# Security: only process issues from trusted authors
+if ! echo "$ALLOWED_AUTHORS" | tr ' ' '\n' | grep -qx "$ISSUE_AUTHOR"; then
+  log "BLOCKED: issue #${ISSUE_NUM} authored by '$ISSUE_AUTHOR' — not in allowed list. Skipping."
+  gh issue edit "$ISSUE_NUM" --remove-label "autofix" --remove-label "revise" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
+  exit 1
+fi
 
 # Check retry count label (e.g. "retry-1", "retry-2")
 RETRY_COUNT=$(echo "$ISSUE_JSON" | jq -r '.labels[].name' | grep -E '^retry-[0-9]+$' | sort -t- -k2 -n | tail -1 | grep -oE '[0-9]+$' || echo "0")
@@ -45,7 +55,7 @@ upload_video_proof() {
   local pr_number="$1"
   local worktree_path="$2"
 
-  VIDEO_FILES=$(find "$worktree_path" -path '*/test-results/*' -name '*.webm' >/dev/null 2>&1 || true)
+  VIDEO_FILES=$(find "$worktree_path" -path '*/test-results/*' -name '*.webm' 2>/dev/null || true)
   if [ -z "$VIDEO_FILES" ]; then
     log "No video recordings found."
     return
@@ -136,7 +146,7 @@ create_pr() {
 The agent created a worktree but did not commit any changes.
 "
     # Check if there were uncommitted changes that failed to commit
-    UNCOMMITTED=$(cd "$worktree_path" && git status --porcelain >/dev/null 2>&1 || true)
+    UNCOMMITTED=$(cd "$worktree_path" && git status --porcelain 2>/dev/null || true)
     if [ -n "$UNCOMMITTED" ]; then
       NO_COMMIT_BODY+="
 Uncommitted files found in worktree:
@@ -165,7 +175,7 @@ ${SAVED_CLAUDE_RESULT}
   git push -u origin "worktree-${BRANCH}" 2>/dev/null || git push -u origin HEAD
 
   # Check if PR already exists
-  EXISTING_PR=$(gh pr list --head "worktree-${BRANCH}" --json url --jq '.[0].url' --repo "oxue/treenote" >/dev/null 2>&1 || true)
+  EXISTING_PR=$(gh pr list --head "worktree-${BRANCH}" --json url --jq '.[0].url' --repo "oxue/treenote" 2>/dev/null || true)
   if [ -n "$EXISTING_PR" ]; then
     log "PR already exists: $EXISTING_PR (pushed latest changes)"
     PR_URL="$EXISTING_PR"
@@ -202,7 +212,7 @@ if [ "$MODE" = "--cleanup" ]; then
     log "No worktree found at ${WORKTREE_PATH}"
     exit 0
   fi
-  PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" >/dev/null 2>&1 || true)
+  PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" 2>/dev/null || true)
   if [ "$PR_STATE" = "MERGED" ]; then
     git worktree remove "$WORKTREE_PATH" --force
     git branch -D "worktree-${BRANCH}" >/dev/null 2>&1 || true
@@ -221,6 +231,204 @@ if [ "$MODE" = "--pr" ]; then
     exit 1
   fi
   create_pr "$WORKTREE_PATH"
+  exit 0
+fi
+
+# --revise mode: apply PR feedback on top of existing worktree
+# In this mode, ISSUE_NUM is actually the PR number (passed by the daemon)
+if [ "$MODE" = "--revise" ]; then
+  PR_NUMBER="$ISSUE_NUM"
+  log "Revising PR #${PR_NUMBER}..."
+
+  # Get PR details: branch name, linked issue, body
+  PR_JSON=$(gh pr view "$PR_NUMBER" --repo "oxue/treenote" --json headRefName,body,author 2>/dev/null)
+  PR_HEAD=$(echo "$PR_JSON" | jq -r '.headRefName')
+  PR_AUTHOR=$(echo "$PR_JSON" | jq -r '.author.login')
+
+  # Derive the worktree branch from the PR head ref (e.g. worktree-fix-issue-41 -> fix-issue-41)
+  BRANCH=$(echo "$PR_HEAD" | sed 's/^worktree-//')
+  WORKTREE_PATH="$REPO_ROOT/.claude/worktrees/${BRANCH}"
+
+  # Extract linked issue number from PR body ("Closes #N")
+  LINKED_ISSUE=$(echo "$PR_JSON" | jq -r '.body' | grep -oE 'Closes #[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+
+  if [ ! -d "$WORKTREE_PATH" ]; then
+    log "No worktree found at ${WORKTREE_PATH} — cannot revise."
+    gh pr comment "$PR_NUMBER" \
+      --body "### Revision failed
+
+No existing worktree found. The worktree may have been cleaned up." \
+      --repo "oxue/treenote" >/dev/null 2>&1 || true
+    gh pr edit "$PR_NUMBER" --remove-label "revise" --repo "oxue/treenote" >/dev/null 2>&1 || true
+    exit 1
+  fi
+
+  # Update labels on the PR
+  gh pr edit "$PR_NUMBER" --remove-label "revise" --add-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
+
+  # Build jq author filter from allowed list (e.g. "oxue user2" -> '.author.login == "oxue" or .author.login == "user2"')
+  AUTHOR_FILTER=""
+  USER_FILTER=""
+  for author in $ALLOWED_AUTHORS; do
+    [ -n "$AUTHOR_FILTER" ] && AUTHOR_FILTER="$AUTHOR_FILTER or "
+    AUTHOR_FILTER="${AUTHOR_FILTER}.author.login == \"${author}\""
+    [ -n "$USER_FILTER" ] && USER_FILTER="$USER_FILTER or "
+    USER_FILTER="${USER_FILTER}.user.login == \"${author}\""
+  done
+
+  # PR conversation comments (trusted authors only)
+  PR_COMMENTS=$(gh pr view "$PR_NUMBER" --repo "oxue/treenote" --json comments \
+    --jq "[.comments[] | select(${AUTHOR_FILTER}) | \"**\\(.author.login)** (\\(.createdAt)):\\n\\(.body)\"] | join(\"\\n\\n---\\n\\n\")" 2>/dev/null || true)
+
+  # PR review comments (inline code review comments)
+  REVIEW_COMMENTS=$(gh api "repos/oxue/treenote/pulls/${PR_NUMBER}/comments" \
+    --jq "[.[] | select(${USER_FILTER}) | \"**\\(.user.login)** on \`\\(.path)\` line \\(.line // .original_line):\\n\\(.body)\"] | join(\"\\n\\n---\\n\\n\")" 2>/dev/null || true)
+
+  # PR review bodies (the top-level review message when submitting a review)
+  REVIEW_BODIES=$(gh api "repos/oxue/treenote/pulls/${PR_NUMBER}/reviews" \
+    --jq "[.[] | select(${USER_FILTER}) | select(.body != null and .body != \"\") | \"**\\(.user.login)** (\\(.state)):\\n\\(.body)\"] | join(\"\\n\\n---\\n\\n\")" 2>/dev/null || true)
+
+  # Combine all feedback
+  COMMENTS="${PR_COMMENTS}"
+  [ -n "$REVIEW_COMMENTS" ] && COMMENTS="${COMMENTS}
+
+---
+
+### Inline code review comments:
+${REVIEW_COMMENTS}"
+  [ -n "$REVIEW_BODIES" ] && COMMENTS="${COMMENTS}
+
+---
+
+### Review summaries:
+${REVIEW_BODIES}"
+
+  if [ -z "$COMMENTS" ]; then
+    log "No feedback comments found on PR #${PR_NUMBER}."
+    gh pr comment "$PR_NUMBER" --body "### Revision skipped
+
+No review feedback found from trusted authors. Add a comment describing what to change, then re-add the \`revise\` label." \
+      --repo "oxue/treenote" >/dev/null 2>&1 || true
+    gh pr edit "$PR_NUMBER" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
+    exit 1
+  fi
+
+  # Get the diff of what's already been done
+  EXISTING_DIFF=$(cd "$WORKTREE_PATH" && git diff master..HEAD 2>/dev/null || true)
+
+  # Fetch the original issue context if we have a linked issue
+  ISSUE_CONTEXT=""
+  if [ -n "$LINKED_ISSUE" ]; then
+    ISSUE_CONTEXT="## Original Issue #${LINKED_ISSUE}: ${ISSUE_TITLE}
+
+${ISSUE_BODY}"
+  fi
+
+  REVISE_PROMPT="You are revising a fix for a bug in the treenote project. A previous attempt has already been made and PR #${PR_NUMBER} exists. The reviewer has left feedback.
+
+${ISSUE_CONTEXT}
+
+## Feedback from reviewer (PR #${PR_NUMBER})
+
+${COMMENTS}
+
+## What's already been changed (diff from master)
+
+\`\`\`diff
+${EXISTING_DIFF}
+\`\`\`
+
+## Instructions
+1. Read the feedback carefully — it tells you what to change.
+2. Look at the existing code in this worktree (it already has the prior fix applied).
+3. Apply the requested revisions on top of the existing work.
+4. Run \`npm run build\` to verify the build passes.
+5. Keep changes focused on the feedback.
+6. If there's an existing Playwright test, update it if needed and re-run it."
+
+  # Copy .env if missing
+  if [ -f "$REPO_ROOT/.env" ] && [ ! -f "$WORKTREE_PATH/.env" ]; then
+    cp "$REPO_ROOT/.env" "$WORKTREE_PATH/.env"
+  fi
+
+  # Run Claude in the existing worktree (cd into it, not --worktree flag)
+  CONVERSATION_LOG=$(mktemp /tmp/claude-revise-${PR_NUMBER}-XXXXXX)
+  TIMED_OUT=false
+
+  cd "$WORKTREE_PATH"
+  claude -p "$REVISE_PROMPT" \
+    --dangerously-skip-permissions \
+    --max-turns 50 \
+    --output-format json > "$CONVERSATION_LOG" 2>&1 &
+  CLAUDE_PID=$!
+  log "Revision: Claude started with PID ${CLAUDE_PID} in worktree ${WORKTREE_PATH}"
+
+  # Monitor with hard timeout
+  ELAPSED=0
+  CHECK_INTERVAL=30
+  while kill -0 "$CLAUDE_PID" 2>/dev/null; do
+    sleep "$CHECK_INTERVAL"
+    ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+    if [ "$ELAPSED" -ge "$CLAUDE_TIMEOUT" ]; then
+      log "Claude PID ${CLAUDE_PID} exceeded hard timeout (${CLAUDE_TIMEOUT}s). Killing."
+      kill "$CLAUDE_PID" >/dev/null 2>&1 || true
+      sleep 2
+      kill -9 "$CLAUDE_PID" >/dev/null 2>&1 || true
+      TIMED_OUT=true
+      break
+    fi
+    if [ $((ELAPSED % 300)) -eq 0 ]; then
+      log "Revision: Claude PID ${CLAUDE_PID} still running (${ELAPSED}s elapsed)..."
+    fi
+  done
+
+  wait "$CLAUDE_PID" >/dev/null 2>&1 || true
+
+  if [ "$TIMED_OUT" = true ]; then
+    log "Claude timed out during revision of PR #${PR_NUMBER}."
+    CLAUDE_RESULT=$(jq -r '.result // empty' "$CONVERSATION_LOG" 2>/dev/null || true)
+    TIMEOUT_BODY="### Revision timed out
+
+Exceeded ${CLAUDE_TIMEOUT}s limit."
+    if [ -n "$CLAUDE_RESULT" ]; then
+      TIMEOUT_BODY+="
+<details>
+<summary>Agent output before timeout</summary>
+
+\`\`\`
+${CLAUDE_RESULT:0:3000}
+\`\`\`
+</details>"
+    fi
+    gh pr comment "$PR_NUMBER" --body "$TIMEOUT_BODY" --repo "oxue/treenote" >/dev/null 2>&1 || true
+    gh pr edit "$PR_NUMBER" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
+    rm -f "$CONVERSATION_LOG"
+    exit 1
+  fi
+
+  rm -f "$CONVERSATION_LOG"
+
+  # Commit, push, update PR
+  cd "$WORKTREE_PATH"
+  if [ -n "$(git status --porcelain)" ]; then
+    git add -A
+    git commit -m "fix: revise PR #${PR_NUMBER} — address review feedback"
+  fi
+
+  COMMITS_AHEAD=$(git rev-list --count master..HEAD 2>/dev/null || echo "0")
+  if [ "$COMMITS_AHEAD" -gt 0 ]; then
+    log "Pushing revision for PR #${PR_NUMBER}..."
+    git push 2>/dev/null || git push -u origin HEAD
+    log "Revision pushed for PR #${PR_NUMBER}."
+
+    # Upload new video proof if tests were re-run
+    upload_video_proof "$PR_NUMBER" "$WORKTREE_PATH"
+  else
+    log "No new commits after revision of PR #${PR_NUMBER}."
+  fi
+
+  gh pr edit "$PR_NUMBER" --remove-label "in-progress" --repo "oxue/treenote" >/dev/null 2>&1 || true
+  log "Revision done for PR #${PR_NUMBER}."
   exit 0
 fi
 
@@ -349,14 +557,15 @@ else
   CLAUDE_PID=$!
   log "Claude started with PID ${CLAUDE_PID}, log: ${CONVERSATION_LOG}"
 
-  # Monitor Claude: enforce hard timeout and stuck detection
+  # Monitor Claude: enforce hard timeout only.
+  # Note: stuck detection based on log file modification doesn't work with
+  # --output-format json, which writes nothing until Claude finishes.
   ELAPSED=0
   CHECK_INTERVAL=30
   while kill -0 "$CLAUDE_PID" 2>/dev/null; do
     sleep "$CHECK_INTERVAL"
     ELAPSED=$((ELAPSED + CHECK_INTERVAL))
 
-    # Hard timeout
     if [ "$ELAPSED" -ge "$CLAUDE_TIMEOUT" ]; then
       log "Claude PID ${CLAUDE_PID} exceeded hard timeout (${CLAUDE_TIMEOUT}s). Killing."
       kill "$CLAUDE_PID" >/dev/null 2>&1 || true
@@ -366,19 +575,9 @@ else
       break
     fi
 
-    # Stuck detection: check if log file hasn't grown in STUCK_TIMEOUT seconds
-    if [ -f "$CONVERSATION_LOG" ]; then
-      LAST_MODIFIED=$(date -r "$CONVERSATION_LOG" +%s 2>/dev/null || echo "0")
-      NOW=$(date +%s)
-      IDLE=$((NOW - LAST_MODIFIED))
-      if [ "$IDLE" -ge "$STUCK_TIMEOUT" ]; then
-        log "Claude PID ${CLAUDE_PID} has been idle for ${IDLE}s (no log activity). Treating as stuck."
-        kill "$CLAUDE_PID" >/dev/null 2>&1 || true
-        sleep 2
-        kill -9 "$CLAUDE_PID" >/dev/null 2>&1 || true
-        TIMED_OUT=true
-        break
-      fi
+    # Log progress every 5 minutes
+    if [ $((ELAPSED % 300)) -eq 0 ]; then
+      log "Claude PID ${CLAUDE_PID} still running (${ELAPSED}s elapsed)..."
     fi
   done
 
@@ -389,10 +588,10 @@ else
   CLAUDE_RESULT=""
   if [ -f "$CONVERSATION_LOG" ] && [ -s "$CONVERSATION_LOG" ]; then
     # --output-format json produces a JSON object with a "result" field containing Claude's final response
-    CLAUDE_RESULT=$(jq -r '.result // empty' "$CONVERSATION_LOG" >/dev/null 2>&1 || true)
+    CLAUDE_RESULT=$(jq -r '.result // empty' "$CONVERSATION_LOG" 2>/dev/null || true)
     # If no .result field, try to get the raw text (fallback for non-JSON output)
     if [ -z "$CLAUDE_RESULT" ]; then
-      CLAUDE_RESULT=$(tail -100 "$CONVERSATION_LOG" >/dev/null 2>&1 || true)
+      CLAUDE_RESULT=$(tail -100 "$CONVERSATION_LOG" 2>/dev/null || true)
     fi
     # Truncate to 3000 chars to fit in a GitHub comment
     if [ ${#CLAUDE_RESULT} -gt 3000 ]; then

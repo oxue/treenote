@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Always resolve to the MAIN repo root, even if invoked from a worktree.
 REPO_ROOT="$(cd "$(dirname "$0")/.." && git worktree list --porcelain | head -1 | sed 's/^worktree //')"
-INTERVAL=600 # 10m
+INTERVAL=30 # 30s
 LOG_FILE="${HOME}/.treenote-autofix.log"
 
 cd "$REPO_ROOT"
@@ -38,11 +38,11 @@ recover_stale_inprogress() {
   fi
 
   while IFS= read -r issue_num; do
-    BRANCH="fix/issue-${issue_num}"
+    BRANCH="fix-issue-${issue_num}"
     WORKTREE_PATH="$REPO_ROOT/.claude/worktrees/${BRANCH}"
 
     # Check if a Claude process is actively handling this issue
-    CLAUDE_RUNNING=$(pgrep -f "fix/issue-${issue_num}" 2>/dev/null | head -1 || true)
+    CLAUDE_RUNNING=$(pgrep -f "fix-issue-${issue_num}" 2>/dev/null | head -1 || true)
     if [ -n "$CLAUDE_RUNNING" ]; then
       log "Issue #${issue_num}: Claude is still running (PID ${CLAUDE_RUNNING}), skipping recovery."
       continue
@@ -74,13 +74,13 @@ recover_stale_inprogress() {
 cleanup_merged_worktrees() {
   log "Checking for merged worktrees to clean up..."
 
-  # Only auto-clean fix/issue-* worktrees (autofix pipeline).
+  # Only auto-clean fix-issue-* worktrees (autofix pipeline).
   # agent-* and feat-* worktrees are manual — skip them.
-  for wt_path in "$REPO_ROOT"/.claude/worktrees/fix/issue-*; do
+  for wt_path in "$REPO_ROOT"/.claude/worktrees/fix-issue-*; do
     [ -d "$wt_path" ] || continue
 
     issue_num=$(basename "$wt_path" | sed 's/issue-//')
-    BRANCH="fix/issue-${issue_num}"
+    BRANCH="fix-issue-${issue_num}"
 
     # Check if the PR branch has been merged
     PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" 2>/dev/null || true)
@@ -123,6 +123,25 @@ while true; do
       "$REPO_ROOT/scripts/fix-issue.sh" "$issue_num" 2>&1 | tee -a "$LOG_FILE" || log "Issue #${issue_num} failed, continuing..."
       log "--- Done with issue #${issue_num} ---"
     done <<< "$ISSUES"
+  fi
+
+  # Check for PRs needing revision (labeled "revise")
+  REVISIONS=$(gh pr list \
+    --repo oxue/treenote \
+    --state open \
+    --label revise \
+    --json number,headRefName,labels \
+    --jq '.[] | select(.labels | map(.name) | contains(["in-progress"]) | not) | "\(.number)|\(.headRefName)"' 2>/dev/null || true)
+
+  if [ -z "$REVISIONS" ]; then
+    log "No revisions to process."
+  else
+    while IFS= read -r revision_info; do
+      pr_num=$(echo "$revision_info" | cut -d'|' -f1)
+      log "--- Revising PR #${pr_num} ---"
+      "$REPO_ROOT/scripts/fix-issue.sh" "$pr_num" --revise 2>&1 | tee -a "$LOG_FILE" || log "Revision PR #${pr_num} failed, continuing..."
+      log "--- Done revising PR #${pr_num} ---"
+    done <<< "$REVISIONS"
   fi
 
   log "Sleeping ${INTERVAL}s until next poll..."

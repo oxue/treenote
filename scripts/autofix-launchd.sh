@@ -83,15 +83,15 @@ PLISTEOF
     echo "=== Worktree Cleanup ==="
     echo ""
 
-    # Auto-clean merged fix/issue-* worktrees
+    # Auto-clean merged fix-issue-* worktrees
     CLEANED=0
-    for wt_path in "$REPO_ROOT"/.claude/worktrees/fix/issue-*; do
+    for wt_path in "$REPO_ROOT"/.claude/worktrees/fix-issue-*; do
       [ -d "$wt_path" ] || continue
       issue_num=$(basename "$wt_path" | sed 's/issue-//')
-      BRANCH="fix/issue-${issue_num}"
+      BRANCH="fix-issue-${issue_num}"
       PR_STATE=$(gh pr list --head "worktree-${BRANCH}" --state merged --json state --jq '.[0].state' --repo "oxue/treenote" 2>/dev/null || true)
       if [ "$PR_STATE" = "MERGED" ]; then
-        echo "Removing fix/issue-${issue_num} (PR merged)"
+        echo "Removing fix-issue-${issue_num} (PR merged)"
         git worktree remove "$wt_path" --force 2>/dev/null || rm -rf "$wt_path"
         git branch -D "worktree-${BRANCH}" 2>/dev/null || true
         CLEANED=$((CLEANED + 1))
@@ -107,10 +107,10 @@ PLISTEOF
     while IFS= read -r line; do
       wt_path=$(echo "$line" | awk '{print $1}')
       wt_branch=$(echo "$line" | sed 's/.*\[//' | sed 's/\]//')
-      # Skip main repo and fix/issue-* paths
+      # Skip main repo and fix-issue-* paths
       case "$wt_path" in
         "$REPO_ROOT") continue ;;
-        *fix/issue-*) continue ;;
+        *fix-issue-*) continue ;;
       esac
       MANUAL_WTS+=("$wt_path|$wt_branch")
     done < <(git worktree list)
