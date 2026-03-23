@@ -17,6 +17,10 @@
   margin-bottom: 16px;
 }
 
+.queue-bar.queue-focused .queue-items {
+  height: 228px; /* fixed height = large item (220px) + padding (8px) to prevent tree jiggle */
+}
+
 .queue-label {
   font-size: 10px;
   color: var(--text-faint);
