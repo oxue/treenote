@@ -390,6 +390,7 @@ export default function App({ session }) {
     setLegendVisible,
     keybindingScheme: settings.keybindingScheme,
     webSettingsOpen, setWebSettingsOpen,
+    defaultMarkdown: settings.defaultMarkdown,
   });
 
   // Scroll selected item into view
@@ -661,7 +662,15 @@ export default function App({ session }) {
         ejecting={ejecting}
         queueEditRef={queueEditRef}
         tree={tree}
-        onSelectItem={(i) => { setFocus('queue'); setQueueIndex(i); }}
+        settings={settings}
+        onSelectItem={(i) => {
+          if (focus === 'queue' && i === queueIndex) {
+            setMode('edit');
+          } else {
+            setFocus('queue');
+            setQueueIndex(i);
+          }
+        }}
         onUpdateText={(i, text) => {
           const item = queue[i];
           pushUndo();

@@ -74,8 +74,8 @@ export function getNavLabels(scheme) {
     right: '\u2192',
     upSymbol: '\u25B2',
     downSymbol: '\u25BC',
-    leftSymbol: '\u25C4',
-    rightSymbol: '\u25BA',
+    leftSymbol: '\u25C0',
+    rightSymbol: '\u25B6',
     toggleLegend: 'l',
     schemeName: 'Arrow Keys',
   };

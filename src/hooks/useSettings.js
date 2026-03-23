@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   keybindingScheme: 'arrows',
   theme: 'dark',
   enterNewline: true,
+  defaultMarkdown: false,
 };
 
 function loadSettings() {

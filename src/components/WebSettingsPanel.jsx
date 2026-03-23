@@ -186,6 +186,30 @@ export default function WebSettingsPanel({
           </label>
         </div>
       </div>
+
+      <div className="enter-behavior-section">
+        <span className="web-settings-label">Default markdown for new boxes</span>
+        <div className="enter-behavior-toggle">
+          <label className={`enter-option ${settings.defaultMarkdown ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="defaultMarkdown"
+              checked={settings.defaultMarkdown}
+              onChange={() => onUpdateSettings({ defaultMarkdown: true })}
+            />
+            <span className="enter-option-label">New boxes default to markdown</span>
+          </label>
+          <label className={`enter-option ${!settings.defaultMarkdown ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="defaultMarkdown"
+              checked={!settings.defaultMarkdown}
+              onChange={() => onUpdateSettings({ defaultMarkdown: false })}
+            />
+            <span className="enter-option-label">New boxes default to plain text</span>
+          </label>
+        </div>
+      </div>
     </div>
   );
 

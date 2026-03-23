@@ -31,8 +31,10 @@ export default function useKeyboard({
   setLegendVisible,
   keybindingScheme,
   webSettingsOpen, setWebSettingsOpen,
+  defaultMarkdown,
 }) {
   const scheme = keybindingScheme || 'arrows';
+  const insertOpts = defaultMarkdown ? { markdown: true } : {};
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -288,7 +290,7 @@ export default function useKeyboard({
       if (isUp(e, scheme)) {
         e.preventDefault();
         if (isMeta) {
-          applyAction(insertSiblingAbove(tree, path, selectedIndex));
+          applyAction(insertSiblingAbove(tree, path, selectedIndex, insertOpts));
           setMode('edit');
         } else if (e.altKey) {
           const result = moveToSibling(tree, path, selectedIndex, -1);
@@ -313,7 +315,7 @@ export default function useKeyboard({
       if (isDown(e, scheme)) {
         e.preventDefault();
         if (isMeta) {
-          applyAction(insertSiblingBelow(tree, path, selectedIndex));
+          applyAction(insertSiblingBelow(tree, path, selectedIndex, insertOpts));
           setMode('edit');
         } else if (e.altKey) {
           const result = moveToSibling(tree, path, selectedIndex, 1);
@@ -331,7 +333,7 @@ export default function useKeyboard({
       if (isRight(e, scheme)) {
         e.preventDefault();
         if (isMeta) {
-          const result = insertChild(tree, path, selectedIndex);
+          const result = insertChild(tree, path, selectedIndex, insertOpts);
           if (result) { applyAction(result); setMode('edit'); }
         } else {
           const selected = nodes[selectedIndex];
@@ -344,7 +346,7 @@ export default function useKeyboard({
       if (isLeft(e, scheme)) {
         e.preventDefault();
         if (isMeta) {
-          const result = insertParent(tree, path, selectedIndex);
+          const result = insertParent(tree, path, selectedIndex, insertOpts);
           if (result) { applyAction(result); setMode('edit'); }
         } else if (e.altKey) {
           const result = moveToParentLevel(tree, path, selectedIndex);

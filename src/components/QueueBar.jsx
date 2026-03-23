@@ -1,4 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react';
+import { marked } from 'marked';
 import { findNodeById } from '../actions';
 import DeadlineBadge from './DeadlineBadge';
 import './QueueBar.css';
@@ -8,7 +9,7 @@ const LARGE_WIDTH = 400;
 const GAP = 10;
 const PEEK = 50; // how much of the previous item peeks from the left
 
-export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
+export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, settings, onSelectItem, onUpdateText, onExitEdit }) {
   const selectedCardRef = useRef(null);
   const isFocused = focus === 'queue';
 
@@ -44,6 +45,7 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
               const displayDeadlineTime = treeNode ? treeNode.deadlineTime : item.deadlineTime;
               const displayDeadlineDuration = treeNode ? treeNode.deadlineDuration : item.deadlineDuration;
               const displayPriority = treeNode ? treeNode.priority : item.priority;
+              const displayMarkdown = treeNode ? treeNode.markdown : item.markdown;
               const displayDetails = item.details || '';
 
               const firstLine = (displayText || '').split('\n')[0] || (item.type === 'temp' ? '...' : '');
@@ -71,6 +73,18 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
                           e.preventDefault();
                           onUpdateText(i, e.target.value.trim());
                           onExitEdit();
+                        } else if (e.key === 'Enter' && settings?.enterNewline) {
+                          if (e.shiftKey) {
+                            e.preventDefault();
+                            onUpdateText(i, e.target.value.trim());
+                            onExitEdit();
+                          }
+                        } else if (e.key === 'Enter' && !settings?.enterNewline) {
+                          if (!e.shiftKey) {
+                            e.preventDefault();
+                            onUpdateText(i, e.target.value.trim());
+                            onExitEdit();
+                          }
                         }
                         e.stopPropagation();
                       }}
@@ -84,10 +98,16 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
                     <>
                       <div className="queue-item-title">
                         {displayChecked && <span className="queue-item-check">&#10003; </span>}
-                        {firstLine}
+                        {displayMarkdown ? (
+                          <span className="node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(firstLine) }} />
+                        ) : firstLine}
                       </div>
                       {isFocused && displayText && displayText.includes('\n') && (
-                        <div className="queue-item-body">{displayText.split('\n').slice(1).join('\n')}</div>
+                        <div className="queue-item-body">
+                          {displayMarkdown ? (
+                            <span className="node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(displayText.split('\n').slice(1).join('\n')) }} />
+                          ) : displayText.split('\n').slice(1).join('\n')}
+                        </div>
                       )}
                       {isFocused && (
                         <div className="queue-item-badges">
