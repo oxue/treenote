@@ -1,25 +1,38 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { findNodeById } from '../actions';
 import DeadlineBadge from './DeadlineBadge';
 import './QueueBar.css';
+
+const SMALL_WIDTH = 120;
+const LARGE_WIDTH = 400;
+const GAP = 10;
+const PEEK = 50; // how much of the previous item peeks from the left
 
 export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, queueEditRef, tree, onSelectItem, onUpdateText, onExitEdit }) {
   const selectedCardRef = useRef(null);
   const isFocused = focus === 'queue';
 
-  // Scroll selected card into view
-  useEffect(() => {
-    if (isFocused && selectedCardRef.current) {
-      selectedCardRef.current.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  // Calculate translateX to keep selected item at a consistent left position
+  const containerOffset = useMemo(() => {
+    if (!isFocused || queue.length === 0) return 0;
+    // Sum widths of all items before queueIndex
+    let offset = 0;
+    for (let i = 0; i < queueIndex; i++) {
+      offset += SMALL_WIDTH + GAP;
     }
-  }, [isFocused, queueIndex]);
+    // Shift left so selected aligns near left edge, with peek of previous
+    if (queueIndex > 0) {
+      return -(offset - PEEK);
+    }
+    return 0;
+  }, [isFocused, queueIndex, queue.length]);
 
   return (
     <>
       {queue.length > 0 && (
         <div className={`queue-bar ${isFocused ? 'queue-focused' : ''}`}>
           <div className="queue-label">Queue</div>
-          <div className="queue-items">
+          <div className="queue-items" style={isFocused ? { transform: `translateX(${containerOffset}px)`, overflow: 'visible' } : {}}>
             {queue.map((item, i) => {
               const isSelected = isFocused && i === queueIndex;
               const isEditing = isSelected && mode === 'edit';
@@ -39,7 +52,7 @@ export default function QueueBar({ queue, queueIndex, focus, mode, ejecting, que
                 <div
                   key={i}
                   ref={isSelected ? selectedCardRef : undefined}
-                  className={`queue-item ${isFocused ? 'expanded' : 'compact'} ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
+                  className={`queue-item ${isFocused ? (isSelected ? 'expanded queue-large' : 'expanded queue-small') : 'compact'} ${isSelected ? 'queue-selected' : ''} ${isEditing ? 'queue-editing' : ''} ${item.type === 'temp' ? 'queue-temp' : ''} ${displayChecked ? 'checked' : ''}`}
                   onClick={() => onSelectItem(i)}
                 >
                   {isEditing ? (
