@@ -99,9 +99,42 @@ cleanup_merged_worktrees() {
   git worktree prune 2>/dev/null || true
 }
 
-# Run recovery and cleanup once at startup
+# --- Auto-deploy: deploy to prod when master has new commits ---
+LAST_DEPLOY_FILE="$HOME/.treenote-last-deploy"
+deploy_if_needed() {
+  # Fetch latest from origin (don't touch local branch)
+  git fetch origin master >/dev/null 2>&1 || true
+
+  ORIGIN_SHA=$(git rev-parse origin/master 2>/dev/null)
+  LAST_DEPLOY_SHA=$(cat "$LAST_DEPLOY_FILE" 2>/dev/null || true)
+
+  if [ "$ORIGIN_SHA" = "$LAST_DEPLOY_SHA" ]; then
+    return
+  fi
+
+  log "New commits on origin/master (${LAST_DEPLOY_SHA:0:7}..${ORIGIN_SHA:0:7}). Deploying to prod..."
+  # Check out origin/master into a temp dir to build from clean state
+  DEPLOY_DIR=$(mktemp -d /tmp/treenote-deploy-XXXXXX)
+  if git worktree add "$DEPLOY_DIR" origin/master --detach >/dev/null 2>&1; then
+    cp "$REPO_ROOT/.env" "$DEPLOY_DIR/.env" 2>/dev/null || true
+    cp -r "$REPO_ROOT/.vercel" "$DEPLOY_DIR/.vercel" 2>/dev/null || true
+    if (cd "$DEPLOY_DIR" && vercel --prod --yes 2>&1 | tail -3) >> "$LOG_FILE"; then
+      echo "$ORIGIN_SHA" > "$LAST_DEPLOY_FILE"
+      log "Deploy complete."
+    else
+      log "Deploy failed."
+    fi
+    git worktree remove "$DEPLOY_DIR" --force 2>/dev/null || rm -rf "$DEPLOY_DIR"
+    git worktree prune 2>/dev/null || true
+  else
+    log "Deploy: failed to create temp worktree."
+  fi
+}
+
+# Run recovery, cleanup, and deploy check once at startup
 recover_stale_inprogress
 cleanup_merged_worktrees
+deploy_if_needed
 
 while true; do
   log ""
@@ -147,7 +180,8 @@ while true; do
   log "Sleeping ${INTERVAL}s until next poll..."
   sleep "$INTERVAL"
 
-  # Run recovery and cleanup each cycle
+  # Run recovery, cleanup, and deploy check each cycle
   recover_stale_inprogress
   cleanup_merged_worktrees
+  deploy_if_needed
 done
