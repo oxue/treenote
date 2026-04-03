@@ -1,0 +1,276 @@
+/* MobileTreeScreen — single-level drill-in tree view for mobile */
+
+.mobile-tree-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  overflow: hidden;
+  touch-action: manipulation;
+  position: relative;
+}
+
+/* ===== Breadcrumb bar ===== */
+
+.mobile-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-breadcrumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-breadcrumb {
+  background: none;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--accent);
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  touch-action: manipulation;
+}
+
+.mobile-breadcrumb:active {
+  background: var(--bg-hover);
+}
+
+.mobile-breadcrumb.current {
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: default;
+}
+
+.mobile-breadcrumb-sep {
+  color: var(--text-faint);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ===== Node list ===== */
+
+.mobile-node-list-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.mobile-node-list {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 80px; /* space for FAB */
+}
+
+/* Drill-in / drill-out slide transitions */
+.mobile-node-list.slide-enter-left {
+  animation: slide-in-left 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mobile-node-list.slide-enter-right {
+  animation: slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(100%); opacity: 0.5; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(-100%); opacity: 0.5; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* ===== Empty state ===== */
+
+.mobile-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-faint);
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  padding: 32px;
+  text-align: center;
+}
+
+/* ===== Node row (swipeable) ===== */
+
+.mobile-node-outer {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Action buttons revealed behind the row on swipe */
+.mobile-node-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.mobile-node-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  color: #fff;
+}
+
+.mobile-node-action-btn.check {
+  background: #34c759;
+}
+
+.mobile-node-action-btn.delete {
+  background: #ff3b30;
+}
+
+/* The visible node surface that slides */
+.mobile-node-surface {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 52px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: pan-y;
+  cursor: pointer;
+  will-change: transform;
+}
+
+.mobile-node-surface:active {
+  background: var(--bg-hover);
+}
+
+.mobile-node-surface.swiped {
+  transform: translateX(-128px);
+}
+
+/* ===== Node content ===== */
+
+.mobile-node-text {
+  flex: 1;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.mobile-node-text.checked {
+  text-decoration: line-through;
+  color: var(--text-faint);
+  opacity: 0.6;
+}
+
+/* Child count badge */
+.mobile-node-badge {
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+/* Chevron for drillable nodes */
+.mobile-node-chevron {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+/* Priority dot */
+.mobile-node-priority {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mobile-node-priority.p-high   { background: #ff3b30; }
+.mobile-node-priority.p-medium { background: #ff9500; }
+.mobile-node-priority.p-low    { background: #34c759; }
+
+/* Deadline tag */
+.mobile-node-deadline {
+  flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--queue-bg);
+  border: 1px solid var(--queue-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ===== Floating action button ===== */
+
+.mobile-fab {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 28px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 10;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mobile-fab:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== Swipe-back edge indicator ===== */
+
+.mobile-swipe-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 5;
+}

@@ -18,7 +18,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
     "@supabase/supabase-js": "^2.97.0",
+    "capacitor-widget-bridge": "^8.1.0",
     "gemoji": "^8.1.0",
     "js-yaml": "^4.1.1",
     "marked": "^17.0.4",

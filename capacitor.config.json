@@ -1,0 +1,9 @@
+{
+  "appId": "zenica.TreenoteQueue",
+  "appName": "Treenote Queue",
+  "webDir": "dist",
+  "server": {
+    "iosScheme": "http",
+    "allowNavigation": ["etfkdcsoazbxiqzsjkrh.supabase.co", "accounts.google.com"]
+  }
+}

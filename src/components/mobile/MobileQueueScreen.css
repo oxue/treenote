@@ -1,0 +1,414 @@
+/* Mobile Queue Screen — horizontal card pager */
+
+.mq-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  touch-action: manipulation;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* --- Header --- */
+.mq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 8px;
+  flex-shrink: 0;
+}
+
+.mq-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mq-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mq-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.mq-add-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, transform 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+
+.mq-add-btn:active {
+  background: var(--accent-bg);
+  transform: scale(0.92);
+}
+
+/* --- Card pager --- */
+.mq-pager {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  display: flex;
+  gap: 0;
+  padding: 12px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mq-pager::-webkit-scrollbar {
+  display: none;
+}
+
+/* --- Card wrapper (for scroll-snap alignment) --- */
+.mq-card-wrapper {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+
+/* --- Card --- */
+.mq-card {
+  width: 100%;
+  max-width: 400px;
+  min-height: 280px;
+  max-height: calc(100vh - 200px);
+  background: var(--queue-bg);
+  border: 1.5px solid var(--queue-border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.mq-card.mq-card-swiping {
+  transition: none;
+}
+
+.mq-card.mq-card-temp {
+  border-style: dashed;
+  border-color: var(--accent-border);
+}
+
+.mq-card.mq-card-checked {
+  opacity: 0.4;
+}
+
+.mq-card.mq-card-checked .mq-card-title,
+.mq-card.mq-card-checked .mq-card-body {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-muted);
+}
+
+/* --- Card top row --- */
+.mq-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mq-checkbox {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--queue-border);
+  background: transparent;
+  color: var(--success);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.mq-checkbox:active {
+  transform: scale(0.9);
+}
+
+.mq-checkbox.mq-checkbox-checked {
+  border-color: var(--success);
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.mq-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  flex: 1;
+  word-break: break-word;
+}
+
+/* --- Card body --- */
+.mq-card-body {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* --- Badges --- */
+.mq-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.mq-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.mq-badge-deadline {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.mq-badge-priority-high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.mq-badge-priority-medium {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.mq-badge-priority-low {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.mq-badge-ref {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.mq-badge-temp {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+/* --- Show in tree button --- */
+.mq-show-in-tree {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  align-self: flex-start;
+  transition: background 0.15s;
+}
+
+.mq-show-in-tree:active {
+  background: var(--accent-bg-light);
+}
+
+/* --- Swipe hint overlay --- */
+.mq-swipe-hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+.mq-swipe-hint-check {
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--success);
+}
+
+.mq-swipe-hint-delete {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+/* --- Page dots --- */
+.mq-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 20px 4px;
+  flex-shrink: 0;
+}
+
+.mq-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--queue-border);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.mq-dot.mq-dot-active {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+
+.mq-dot.mq-dot-checked {
+  background: var(--success);
+  opacity: 0.5;
+}
+
+/* --- Bottom actions --- */
+.mq-bottom {
+  padding: 12px 20px 20px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.mq-clear-btn {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.mq-clear-btn:active {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* --- Empty state --- */
+.mq-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+  padding: 40px 20px;
+}
+
+.mq-empty-icon {
+  font-size: 40px;
+  opacity: 0.4;
+}
+
+.mq-empty-text {
+  font-size: 15px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* --- Confirm overlay --- */
+.mq-confirm {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(13, 13, 26, 0.92);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10;
+}
+
+.mq-confirm-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.mq-confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.mq-confirm-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mq-confirm-btn-cancel {
+  background: var(--queue-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.mq-confirm-btn-delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}

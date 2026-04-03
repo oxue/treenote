@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import './AuthGate.css';
+
+const isNative = Capacitor.isNativePlatform();
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
@@ -14,6 +18,42 @@ export default function AuthGate({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
+
+    // On native, listen for app URL open events to handle OAuth callback
+    if (isNative) {
+      import('@capacitor/app').then(({ App }) => {
+        App.addListener('appUrlOpen', async ({ url }) => {
+          console.log('[Auth] appUrlOpen:', url);
+          if (url.includes('auth-callback')) {
+            Browser.close();
+            // The URL may have params as query or fragment
+            // Try code exchange first (PKCE flow)
+            const urlObj = new URL(url);
+            const code = urlObj.searchParams.get('code');
+            if (code) {
+              console.log('[Auth] Exchanging code for session');
+              const { error } = await supabase.auth.exchangeCodeForSession(code);
+              if (error) console.error('[Auth] Code exchange error:', error);
+            } else {
+              // Try hash fragment (implicit flow)
+              const hashParams = new URLSearchParams(url.split('#')[1] || '');
+              const accessToken = hashParams.get('access_token');
+              const refreshToken = hashParams.get('refresh_token');
+              if (accessToken) {
+                console.log('[Auth] Setting session from tokens');
+                const { error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                });
+                if (error) console.error('[Auth] setSession error:', error);
+              } else {
+                console.error('[Auth] No code or access_token in callback URL');
+              }
+            }
+          }
+        });
+      });
+    }
 
     return () => subscription.unsubscribe();
   }, []);
@@ -43,15 +83,37 @@ function LoginPage({ error, setError }) {
   async function signInWith(provider) {
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
+
+    if (isNative) {
+      // On native, get the OAuth URL and open in system browser
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: 'zenica.treenotequeue://auth-callback',
+          skipBrowserRedirect: true,
+          queryParams: {
+            flowType: 'pkce',
+          },
+        },
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+      // Open in system browser (SFSafariViewController)
+      await Browser.open({ url: data.url });
+    } else {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      }
     }
   }
 
