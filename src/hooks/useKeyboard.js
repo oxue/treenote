@@ -25,7 +25,6 @@ export default function useKeyboard({
   setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
   setFocus, setSelectedIndex, setPath, setMode,
   onSave, setBackupOpen,
-  conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth,
   calendarOpen, setCalendarOpen,
   calendarFeedOpen, setCalendarFeedOpen,
   setLegendVisible,
@@ -62,15 +61,6 @@ export default function useKeyboard({
 
       // Web settings panel — Panel handles its own keyboard events
       if (webSettingsOpen) return;
-
-      // Conflict modal — 1/2/3 to resolve
-      if (conflict) {
-        e.preventDefault();
-        if (e.key === '1') onConflictKeepMine();
-        else if (e.key === '2') onConflictKeepTheirs();
-        else if (e.key === '3') onConflictKeepBoth();
-        return;
-      }
 
       // Settings / backup modal — Escape closes it
       if (settingsOpen) {
@@ -448,5 +438,5 @@ export default function useKeyboard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, conflict, onConflictKeepMine, onConflictKeepTheirs, onConflictKeepBoth, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, scheme, webSettingsOpen, setWebSettingsOpen]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, scheme, webSettingsOpen, setWebSettingsOpen]);
 }

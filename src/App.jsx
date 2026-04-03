@@ -14,7 +14,7 @@ import Linkify from './components/Linkify';
 import SettingsModal from './components/SettingsModal';
 import BackupModal from './components/BackupModal';
 import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
-import ConflictModal from './components/ConflictModal';
+import useRealtimeSync from './hooks/useRealtimeSync';
 import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
 import DeadlineBadge from './components/DeadlineBadge';
@@ -31,6 +31,7 @@ import useSettings from './hooks/useSettings';
 import WebSettingsPanel from './components/WebSettingsPanel';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
+import { Capacitor } from '@capacitor/core';
 import { marked } from 'marked';
 import './theme.css';
 import './App.css';
@@ -102,7 +103,6 @@ export default function App({ session }) {
   const [queueIndex, setQueueIndex] = useState(0);
   const [physics, setPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
   const [focus, setFocus] = useState('graph');
-  const [conflict, setConflict] = useState(null); // { localTree, serverTree, serverVersion }
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarFeedOpen, setCalendarFeedOpen] = useState(false);
   const [legendVisible, setLegendVisible] = useState(true);
@@ -115,6 +115,45 @@ export default function App({ session }) {
   const fileInputRef = useRef(null);
   const loadedRef = useRef(false);
   const versionRef = useRef(0);
+  const lastSyncedTreeRef = useRef(null);
+  const lastSyncedQueueRef = useRef(null);
+  const treeRef = useRef(null);
+  const queueRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
+  const queueSaveTimeoutRef = useRef(null);
+
+  // Sync queue to widget via shared UserDefaults
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    import('capacitor-widget-bridge').then(({ WidgetBridge }) => {
+      const snapshot = queue.slice(0, 10).map(item => {
+        const node = item.type === 'ref' && item.nodeId && tree
+          ? (() => { const r = findNodeById(tree, item.nodeId); return r ? r.node : null; })()
+          : null;
+        return {
+          text: node ? node.text : (item.text || '...'),
+          checked: node ? node.checked : item.checked,
+          type: item.type,
+          nodeId: item.nodeId || null,
+          deadline: node ? node.deadline : item.deadline,
+          priority: node ? node.priority : item.priority,
+        };
+      });
+      console.log('[Widget] Writing snapshot, items:', snapshot.length);
+      WidgetBridge.setItem({
+        key: 'queueSnapshot',
+        value: JSON.stringify(snapshot),
+        group: 'group.zenica.treenotequeue',
+      }).then(res => {
+        console.log('[Widget] setItem result:', JSON.stringify(res));
+        return WidgetBridge.reloadAllTimelines();
+      }).then(res => {
+        console.log('[Widget] reloadTimelines result:', JSON.stringify(res));
+      }).catch(err => {
+        console.error('[Widget] Error:', err);
+      });
+    }).catch(err => console.error('[Widget] Import error:', err));
+  }, [queue, tree]);
 
   const { ejecting, ejectQueueItem } = useEjectAnimation(physics, queue, setQueue, setFocus, setQueueIndex, focus);
   const { sliderRef, animatingRef, slideNavigate } = useSlideAnimation(setPath, setSelectedIndex);
@@ -154,6 +193,32 @@ export default function App({ session }) {
   const breadcrumb = getBreadcrumb();
   const selectedNode = currentNodes[selectedIndex];
   const childNodes = selectedNode ? selectedNode.children : [];
+
+  useEffect(() => { treeRef.current = tree; }, [tree]);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+
+  const cancelPendingSaves = useCallback(() => {
+    if (saveTimeoutRef.current) { clearTimeout(saveTimeoutRef.current); saveTimeoutRef.current = null; }
+    if (queueSaveTimeoutRef.current) { clearTimeout(queueSaveTimeoutRef.current); queueSaveTimeoutRef.current = null; }
+  }, []);
+
+  const hasModalOpen = deleteConfirm || clearCheckedConfirm || settingsOpen || backupOpen || calendarOpen || calendarFeedOpen || webSettingsOpen;
+
+  const { broadcast, syncAvailable } = useRealtimeSync({
+    userId,
+    versionRef,
+    mode,
+    hasModalOpen,
+    selectedNodeId: selectedNode?.id,
+    setTree,
+    setQueue,
+    setPath,
+    setSelectedIndex,
+    setToast,
+    lastSyncedTreeRef,
+    lastSyncedQueueRef,
+    cancelPendingSaves,
+  });
 
   const { parentColRef, currentColRef, childColRef, leftSvgRef, rightSvgRef, leftLines, rightLines } = useSvgLines({
     selectedIndex, path, tree,
@@ -275,56 +340,24 @@ export default function App({ session }) {
       saveUserTree(userId, tree, versionRef.current).then((result) => {
         if (result.success) {
           versionRef.current = result.version;
+          broadcast(tree, result.version, queueRef.current);
           setToast('Saved');
           setTimeout(() => setToast(null), 1000);
         } else {
-          setConflict({
-            localTree: tree,
-            serverTree: result.serverTree,
-            serverVersion: result.version,
-          });
+          // Version mismatch — silently apply server state
+          ensureIds(result.serverTree);
+          lastSyncedTreeRef.current = result.serverTree;
+          setTree(result.serverTree);
+          versionRef.current = result.version;
+          setToast('Synced from another device');
+          setTimeout(() => setToast(null), 2000);
         }
       }).catch(() => {
         setToast('Save failed');
         setTimeout(() => setToast(null), 1000);
       });
     }
-  }, [tree, userId]);
-
-  const handleConflictKeepMine = useCallback(() => {
-    if (!conflict) return;
-    saveUserTree(userId, conflict.localTree, conflict.serverVersion).then((result) => {
-      if (result.success) versionRef.current = result.version;
-    }).catch(() => {});
-    setConflict(null);
-  }, [conflict, userId]);
-
-  const handleConflictKeepTheirs = useCallback(() => {
-    if (!conflict) return;
-    ensureIds(conflict.serverTree);
-    setTree(conflict.serverTree);
-    versionRef.current = conflict.serverVersion;
-    setPath([]);
-    setSelectedIndex(0);
-    setUndoStack([]);
-    setRedoStack([]);
-    setConflict(null);
-  }, [conflict]);
-
-  const handleConflictKeepBoth = useCallback(() => {
-    if (!conflict) return;
-    saveBackup(userId, conflict.localTree).catch(() => {});
-    ensureIds(conflict.serverTree);
-    setTree(conflict.serverTree);
-    versionRef.current = conflict.serverVersion;
-    setPath([]);
-    setSelectedIndex(0);
-    setUndoStack([]);
-    setRedoStack([]);
-    setConflict(null);
-    setToast('Your version was saved as a backup. Press B to restore.');
-    setTimeout(() => setToast(null), 5000);
-  }, [conflict, userId]);
+  }, [tree, userId, broadcast]);
 
   const setNodeDeadline = useCallback((dateStr) => {
     if (!tree || !selectedNode) return;
@@ -384,7 +417,6 @@ export default function App({ session }) {
     setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
-    conflict, onConflictKeepMine: handleConflictKeepMine, onConflictKeepTheirs: handleConflictKeepTheirs, onConflictKeepBoth: handleConflictKeepBoth,
     calendarOpen, setCalendarOpen,
     calendarFeedOpen, setCalendarFeedOpen,
     setLegendVisible,
@@ -398,10 +430,6 @@ export default function App({ session }) {
     const el = currentColRef.current?.querySelector('.node-box.selected, .node-box.editing');
     if (el) el.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex, path]);
-
-  // Auto-save debounce refs
-  const saveTimeoutRef = useRef(null);
-  const queueSaveTimeoutRef = useRef(null);
 
   // Load tree on startup — always from Supabase when logged in
   useEffect(() => {
@@ -469,17 +497,21 @@ export default function App({ session }) {
   useEffect(() => {
     if (!userId || !tree || !loadedRef.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = null;
+    if (tree === lastSyncedTreeRef.current) return;
     saveTimeoutRef.current = setTimeout(() => {
       saveUserTree(userId, tree, versionRef.current).then((result) => {
         if (result.success) {
           versionRef.current = result.version;
+          broadcast(tree, result.version, queueRef.current);
         } else {
-          // Conflict — another tab/device saved first
-          setConflict({
-            localTree: tree,
-            serverTree: result.serverTree,
-            serverVersion: result.version,
-          });
+          // Version mismatch — silently apply server state
+          ensureIds(result.serverTree);
+          lastSyncedTreeRef.current = result.serverTree;
+          setTree(result.serverTree);
+          versionRef.current = result.version;
+          setToast('Synced from another device');
+          setTimeout(() => setToast(null), 2000);
         }
       }).catch(() => {
         setToast('Auto-save failed');
@@ -489,19 +521,23 @@ export default function App({ session }) {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [tree, userId]);
+  }, [tree, userId, broadcast]);
 
   // Auto-save queue to Supabase when queue changes (debounced)
   useEffect(() => {
     if (!userId) return;
     if (queueSaveTimeoutRef.current) clearTimeout(queueSaveTimeoutRef.current);
+    queueSaveTimeoutRef.current = null;
+    if (queue === lastSyncedQueueRef.current) return;
     queueSaveTimeoutRef.current = setTimeout(() => {
-      saveUserQueue(userId, queue).catch(() => {});
+      saveUserQueue(userId, queue)
+        .then(() => broadcast(treeRef.current, versionRef.current, queue))
+        .catch(() => {});
     }, 1500);
     return () => {
       if (queueSaveTimeoutRef.current) clearTimeout(queueSaveTimeoutRef.current);
     };
-  }, [queue, userId]);
+  }, [queue, userId, broadcast]);
 
   // Periodic auto-backup every 5 minutes
   useEffect(() => {
@@ -576,9 +612,6 @@ export default function App({ session }) {
       }
     }}>
       <div className="toolbar">
-        <button className="load-btn" onClick={() => fileInputRef.current.click()}>
-          Load File
-        </button>
         {tree && !userId && (
           <button className="load-btn" onClick={() => {
             if (window.treenote?.saveDefaultFile) {
@@ -621,7 +654,7 @@ export default function App({ session }) {
           onChange={handleFileLoad}
         />
         <span className={`mode-indicator ${mode}`}>
-          {mode}
+          {mode}{syncAvailable && <span className="sync-dot" title="Update available">{'\u25CF'}</span>}
         </span>
         {breadcrumb.length > 0 && (
           <div className="breadcrumb">
@@ -981,13 +1014,6 @@ export default function App({ session }) {
             setSelectedIndex(0);
             setUndoStack([]);
           }}
-        />
-      )}
-      {conflict && (
-        <ConflictModal
-          onKeepMine={handleConflictKeepMine}
-          onKeepTheirs={handleConflictKeepTheirs}
-          onKeepBoth={handleConflictKeepBoth}
         />
       )}
       {calendarOpen && selectedNode && (
