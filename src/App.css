@@ -222,8 +222,8 @@ body {
   border-radius: 10px;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   animation: node-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   position: relative;
@@ -324,6 +324,7 @@ body {
   word-break: break-word;
   line-height: 1.5;
   letter-spacing: 0.1px;
+  width: 100%;
 }
 
 .node-link {
@@ -387,10 +388,11 @@ body {
 .node-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   color: var(--text-faint);
   font-size: 13px;
-  flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .child-count {

@@ -775,6 +775,17 @@ export default function App({ session }) {
                       }
                     }}
                   >
+                    {!isEditing && (node.deadline || node.priority || node.markdown || node.checked || node.children.length > 0) && (
+                      <div className="node-meta">
+                        <DeadlineBadge deadline={node.deadline} deadlineTime={node.deadlineTime} deadlineDuration={node.deadlineDuration} />
+                        {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
+                        {node.markdown && <span className="markdown-badge">MD</span>}
+                        {node.checked && <span className="node-check">&#10003;</span>}
+                        {node.children.length > 0 && (
+                          <span className="child-count">{node.children.length}</span>
+                        )}
+                      </div>
+                    )}
                     {isEditing && <span className="edit-icon">&#9998;</span>}
                     {isEditing ? (
                       <textarea
@@ -853,15 +864,6 @@ export default function App({ session }) {
                     ) : (
                       <span className="node-text"><Linkify text={node.text} /></span>
                     )}
-                    <div className="node-meta">
-                      <DeadlineBadge deadline={node.deadline} deadlineTime={node.deadlineTime} deadlineDuration={node.deadlineDuration} />
-                      {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
-                      {node.markdown && <span className="markdown-badge">MD</span>}
-                      {node.checked && <span className="node-check">&#10003;</span>}
-                      {node.children.length > 0 && (
-                        <span className="child-count">{node.children.length}</span>
-                      )}
-                    </div>
                   </div>
                 );
               })}
