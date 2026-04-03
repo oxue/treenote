@@ -29,6 +29,9 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 ### Area docs
 - `docs/keybindings.md` — keyboard handling: design philosophy, module structure, key reference, rules for modifying.
 - `docs/autofix.md` — autofix pipeline: daemon, fix-issue script, label lifecycle, video proof, retry logic.
+- `docs/mobile-app.md` — mobile app: module structure, state ownership, Capacitor/iOS integration, widget sync, modification rules.
+- `docs/mobile-design.md` — mobile app design spec: screen architecture, gestures, interaction patterns, implementation plan.
+- `docs/exploration.md` — exploration mode: diverge-then-converge workflow for research chats, phase signals, rules of engagement.
 
 ### Maintenance rules
 1. **Before touching an area**: read its area doc if one exists.
