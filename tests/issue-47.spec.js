@@ -15,20 +15,50 @@ const fakeSession = {
   },
 };
 
+// Tree with markdown-formatted nodes to verify breadcrumb stripping
+const markdownTree = [
+  {
+    text: '# Project Overview\nThis is the second line',
+    checked: false,
+    children: [
+      {
+        text: '**Bold Task** with extra info',
+        checked: false,
+        children: [
+          { text: 'plain leaf', checked: false, children: [] },
+        ],
+      },
+      {
+        text: '[Link Text](https://example.com)',
+        checked: false,
+        children: [
+          { text: 'another leaf', checked: false, children: [] },
+        ],
+      },
+      {
+        text: '`inline code` node\nline two here',
+        checked: false,
+        children: [
+          { text: 'deep leaf', checked: false, children: [] },
+        ],
+      },
+      {
+        text: '## Sub-heading with ~~strikethrough~~',
+        checked: false,
+        children: [
+          { text: 'child', checked: false, children: [] },
+        ],
+      },
+    ],
+  },
+];
+
 async function setupMocks(page) {
-  await page.route(`${SUPABASE_URL}/auth/v1/token*`, async (route) => {
+  await page.route(`${SUPABASE_URL}/auth/v1/**`, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(fakeSession),
-    });
-  });
-
-  await page.route(`${SUPABASE_URL}/auth/v1/user*`, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(fakeSession.user),
     });
   });
 
@@ -38,13 +68,16 @@ async function setupMocks(page) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify({
+          tree_data: markdownTree,
+          version: 1,
+        }),
       });
     } else {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ version: 2 }),
       });
     }
   });
@@ -55,7 +88,7 @@ async function setupMocks(page) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify({ queue_data: null, version: 1 }),
       });
     } else {
       await route.fulfill({
@@ -103,91 +136,93 @@ test('issue 47: breadcrumbs show first line only and escape markdown', async ({ 
   await page.waitForSelector('.node-box', { timeout: 10000 });
   await pause(500);
 
-  // The default tree has "Welcome to Treenote" as root with children.
-  // Navigate into it by pressing Enter/Right to drill down.
+  // The tree root is "# Project Overview\nThis is the second line"
+  // Navigate into it to see breadcrumbs
   await page.keyboard.press('ArrowRight');
   await pause(500);
 
-  // Now breadcrumbs should be visible
+  // Breadcrumbs should be visible — root crumb should be stripped
   const breadcrumb = page.locator('.breadcrumb');
   await expect(breadcrumb).toBeVisible({ timeout: 5000 });
 
-  // Breadcrumb text should not contain markdown formatting characters
-  const breadcrumbText = await breadcrumb.textContent();
-  console.log('breadcrumb text:', breadcrumbText);
-
-  // Each breadcrumb item should only show plain text (no markdown syntax)
+  // Check root breadcrumb item: should show "Project Overview", not "# Project Overview"
   const items = page.locator('.breadcrumb-item');
-  const count = await items.count();
-  for (let i = 0; i < count; i++) {
-    const text = await items.nth(i).textContent();
-    console.log(`breadcrumb item ${i}:`, JSON.stringify(text));
+  const rootText = await items.first().textContent();
+  console.log('root breadcrumb:', JSON.stringify(rootText));
 
-    // Should not contain raw markdown formatting
-    expect(text).not.toMatch(/^#{1,6}\s/);       // no heading markers
-    expect(text).not.toMatch(/\*\*.+\*\*/);       // no bold markers
-    expect(text).not.toMatch(/\[.+\]\(.+\)/);     // no link syntax
-    expect(text).not.toMatch(/`[^`]+`/);           // no inline code
+  // Must not contain heading marker or second line
+  expect(rootText).not.toMatch(/^#/);
+  expect(rootText).not.toContain('second line');
+  expect(rootText).toContain('Project Overview');
 
-    // Should not contain newlines (first line only)
-    expect(text).not.toContain('\n');
-  }
-
-  // Now let's create a node with markdown and multi-line text, then navigate into it
-  // to verify breadcrumbs strip formatting from user content too.
-  // Go back to root first
-  await page.keyboard.press('ArrowLeft');
-  await pause(500);
-
-  // Create a new node with markdown text
-  await page.keyboard.press('o');  // create sibling below
-  await pause(300);
-
-  // Type markdown-formatted multi-line text
-  await page.keyboard.type('# Heading Node');
-  await page.keyboard.press('Enter');
-  await page.keyboard.type('second line of text');
-  await pause(300);
-
-  // Exit edit mode
-  await page.keyboard.press('Escape');
-  await pause(300);
-
-  // Add a child to this node so we can navigate into it
-  await page.keyboard.press('Tab');  // indent to make it a child... or create child
-  await pause(300);
-
-  // Create a child node
-  await page.keyboard.press('o');
-  await pause(300);
-  await page.keyboard.type('child node');
-  await page.keyboard.press('Escape');
-  await pause(300);
-
-  // Navigate into the parent to see breadcrumbs
-  // First go up to the parent
-  await page.keyboard.press('ArrowUp');
-  await pause(300);
-
-  // Drill into it
+  // Now drill into the bold child: "**Bold Task** with extra info"
   await page.keyboard.press('ArrowRight');
   await pause(500);
 
-  // Check breadcrumbs again
-  const breadcrumb2 = page.locator('.breadcrumb');
-  await expect(breadcrumb2).toBeVisible({ timeout: 5000 });
-
   const items2 = page.locator('.breadcrumb-item');
   const count2 = await items2.count();
+  // The last non-current crumb should be the bold node, stripped
   for (let i = 0; i < count2; i++) {
     const text = await items2.nth(i).textContent();
-    console.log(`breadcrumb2 item ${i}:`, JSON.stringify(text));
+    console.log(`breadcrumb item ${i}:`, JSON.stringify(text));
 
-    // Should not contain heading markers
-    expect(text).not.toMatch(/^#/);
-    // Should not contain newlines
+    // No markdown syntax in any breadcrumb
+    expect(text).not.toMatch(/\*\*/);
+    expect(text).not.toMatch(/^#{1,6}\s/);
+    expect(text).not.toMatch(/\[.+\]\(.+\)/);
+    expect(text).not.toMatch(/`[^`]+`/);
+    expect(text).not.toMatch(/~~/);
     expect(text).not.toContain('\n');
-    // Should not contain "second line"
-    expect(text).not.toContain('second line');
+  }
+
+  // Go back and navigate into the link node
+  await page.keyboard.press('ArrowLeft');
+  await pause(300);
+  await page.keyboard.press('ArrowDown'); // move to link node
+  await pause(300);
+  await page.keyboard.press('ArrowRight'); // drill in
+  await pause(500);
+
+  const linkCrumbs = page.locator('.breadcrumb-item');
+  const linkCount = await linkCrumbs.count();
+  for (let i = 0; i < linkCount; i++) {
+    const text = await linkCrumbs.nth(i).textContent();
+    console.log(`link breadcrumb ${i}:`, JSON.stringify(text));
+    expect(text).not.toMatch(/\[.+\]\(.+\)/);
+    expect(text).not.toContain('https://');
+  }
+
+  // Go back and navigate into the inline code node
+  await page.keyboard.press('ArrowLeft');
+  await pause(300);
+  await page.keyboard.press('ArrowDown'); // move to code node
+  await pause(300);
+  await page.keyboard.press('ArrowRight'); // drill in
+  await pause(500);
+
+  const codeCrumbs = page.locator('.breadcrumb-item');
+  const codeCount = await codeCrumbs.count();
+  for (let i = 0; i < codeCount; i++) {
+    const text = await codeCrumbs.nth(i).textContent();
+    console.log(`code breadcrumb ${i}:`, JSON.stringify(text));
+    expect(text).not.toMatch(/`[^`]+`/);
+    expect(text).not.toContain('line two');
+  }
+
+  // Go back and navigate into the sub-heading + strikethrough node
+  await page.keyboard.press('ArrowLeft');
+  await pause(300);
+  await page.keyboard.press('ArrowDown'); // move to sub-heading node
+  await pause(300);
+  await page.keyboard.press('ArrowRight'); // drill in
+  await pause(500);
+
+  const headCrumbs = page.locator('.breadcrumb-item');
+  const headCount = await headCrumbs.count();
+  for (let i = 0; i < headCount; i++) {
+    const text = await headCrumbs.nth(i).textContent();
+    console.log(`heading breadcrumb ${i}:`, JSON.stringify(text));
+    expect(text).not.toMatch(/^##/);
+    expect(text).not.toMatch(/~~/);
   }
 });

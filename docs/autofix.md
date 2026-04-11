@@ -94,6 +94,7 @@ This auto-removes merged issue worktrees, then lists non-issue worktrees (agent-
 ## Rules for Modifying
 - The prompt template in `fix-issue.sh` tells Claude what to do. Update it if you add new conventions (e.g., new test patterns, new file locations).
 - If you change the Playwright test mock pattern, update both the prompt template and the existing test files.
+- **Video proof must visually demonstrate the fix.** Tests must inject tree data containing the specific content that triggers the bug (e.g., markdown-formatted nodes to prove breadcrumbs strip formatting). Returning `[]` for `user_trees` loads the default tree — which won't contain the right content. Use the `capture-media.spec.js` pattern: return `{ tree_data: customTree, version: 1 }` from the mock route.
 - The daemon polls every 30 seconds (`INTERVAL=30`). Claude gets 30 minutes (`CLAUDE_TIMEOUT=1800`).
 - Max retries is 2 (`MAX_RETRIES=2`). After that, issues get `needs-human`.
 - Branch names use `fix-issue-N` (flat, no slashes). Claude's `--worktree` flag breaks with slashes in branch names.

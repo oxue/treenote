@@ -53,6 +53,7 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 - `npm run build` — production build (must pass before committing)
 - `npx playwright test` — run tests with video recording
 - Tests mock Supabase auth via `page.route()` and `page.addInitScript()` — no real account needed.
+- **Tests must inject tree data that exercises the fix.** Returning `[]` for `user_trees` loads the default tree, which may not contain the content needed to verify the bug. Inject a custom tree via the mock route (see `capture-media.spec.js` for the pattern).
 
 ## Autofix Pipeline
 
