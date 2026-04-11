@@ -15,15 +15,19 @@ const fakeSession = {
   },
 };
 
-// Tree with markdown-formatted nodes to verify breadcrumb stripping
+// Tree with markdown-formatted nodes to verify breadcrumb stripping.
+// Nodes with markdown: true should have formatting stripped;
+// nodes without markdown should keep their text as-is (first line only).
 const markdownTree = [
   {
     text: '# Project Overview\nThis is the second line',
     checked: false,
+    markdown: true,
     children: [
       {
         text: '**Bold Task** with extra info',
         checked: false,
+        markdown: true,
         children: [
           { text: 'plain leaf', checked: false, children: [] },
         ],
@@ -31,6 +35,7 @@ const markdownTree = [
       {
         text: '[Link Text](https://example.com)',
         checked: false,
+        markdown: true,
         children: [
           { text: 'another leaf', checked: false, children: [] },
         ],
@@ -38,17 +43,18 @@ const markdownTree = [
       {
         text: '`inline code` node\nline two here',
         checked: false,
+        markdown: true,
         children: [
           { text: 'deep leaf', checked: false, children: [] },
         ],
       },
-      {
-        text: '## Sub-heading with ~~strikethrough~~',
-        checked: false,
-        children: [
-          { text: 'child', checked: false, children: [] },
-        ],
-      },
+    ],
+  },
+  {
+    text: '**not-markdown node**\nsecond line',
+    checked: false,
+    children: [
+      { text: 'child of non-md', checked: false, children: [] },
     ],
   },
 ];
@@ -209,20 +215,33 @@ test('issue 47: breadcrumbs show first line only and escape markdown', async ({ 
     expect(text).not.toContain('line two');
   }
 
-  // Go back and navigate into the sub-heading + strikethrough node
-  await page.keyboard.press('ArrowLeft');
+  // Navigate back to root level, then into the non-markdown node
+  // The non-markdown node is the 2nd top-level item: "**not-markdown node**\nsecond line"
+  // It does NOT have markdown: true, so ** should be preserved and only first line shown
+  await page.keyboard.press('ArrowLeft'); // back to root's children
   await pause(300);
-  await page.keyboard.press('ArrowDown'); // move to sub-heading node
+  await page.keyboard.press('ArrowLeft'); // back to root level
   await pause(300);
-  await page.keyboard.press('ArrowRight'); // drill in
+  await page.keyboard.press('ArrowLeft'); // ensure at root (no-op if already there)
+  await pause(300);
+  await page.keyboard.press('ArrowDown'); // move to 2nd root node
+  await pause(300);
+  await page.keyboard.press('ArrowRight'); // drill into non-markdown node
   await pause(500);
 
-  const headCrumbs = page.locator('.breadcrumb-item');
-  const headCount = await headCrumbs.count();
-  for (let i = 0; i < headCount; i++) {
-    const text = await headCrumbs.nth(i).textContent();
-    console.log(`heading breadcrumb ${i}:`, JSON.stringify(text));
-    expect(text).not.toMatch(/^##/);
-    expect(text).not.toMatch(/~~/);
+  const nonMdCrumbs = page.locator('.breadcrumb-item');
+  const nonMdCount = await nonMdCrumbs.count();
+  let foundNonMdCrumb = false;
+  for (let i = 0; i < nonMdCount; i++) {
+    const text = await nonMdCrumbs.nth(i).textContent();
+    console.log(`non-md breadcrumb ${i}:`, JSON.stringify(text));
+    if (text.includes('not-markdown')) {
+      foundNonMdCrumb = true;
+      // ** should be preserved since this is not a markdown node
+      expect(text).toContain('**');
+      // second line should not appear (first-line-only still applies)
+      expect(text).not.toContain('second line');
+    }
   }
+  expect(foundNonMdCrumb).toBe(true);
 });
