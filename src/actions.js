@@ -24,7 +24,10 @@ function getNodeAt(tree, path, index) {
 
 function newNode(text = '', opts = {}) {
   const node = { text, checked: false, children: [], id: generateId() };
-  if (opts.markdown) node.markdown = true;
+  if (opts.markdown) {
+    node.markdown = true;
+    if (text === '') node.text = '# ';
+  }
   return node;
 }
 

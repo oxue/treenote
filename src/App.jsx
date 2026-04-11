@@ -323,14 +323,22 @@ export default function App({ session }) {
     if (mode === 'edit' && focus === 'graph' && editInputRef.current) {
       const el = editInputRef.current;
       el.focus();
-      el.select();
+      if (el.value === '# ') {
+        el.setSelectionRange(el.value.length, el.value.length);
+      } else {
+        el.select();
+      }
       el.style.height = 'auto';
       el.style.height = el.scrollHeight + 'px';
     }
     if (mode === 'edit' && focus === 'queue' && queueEditRef.current) {
       const el = queueEditRef.current;
       el.focus();
-      el.select();
+      if (el.value === '# ') {
+        el.setSelectionRange(el.value.length, el.value.length);
+      } else {
+        el.select();
+      }
     }
   }, [mode, focus]);
 
