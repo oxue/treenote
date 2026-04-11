@@ -181,7 +181,18 @@ export default function App({ session }) {
     const crumbs = [];
     let nodes = tree;
     for (const idx of path) {
-      crumbs.push(nodes[idx].text);
+      const firstLine = (nodes[idx].text || '').split('\n')[0];
+      const plain = firstLine
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')   // images
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')     // links
+        .replace(/(\*{1,3}|_{1,3})(.*?)\1/g, '$2')   // bold/italic
+        .replace(/~~(.*?)~~/g, '$1')                  // strikethrough
+        .replace(/`([^`]+)`/g, '$1')                  // inline code
+        .replace(/^#{1,6}\s+/, '')                     // headings
+        .replace(/^>\s?/gm, '')                        // blockquotes
+        .replace(/^[-*+]\s+/, '')                      // list markers
+        .replace(/^\d+\.\s+/, '');                     // ordered list markers
+      crumbs.push(plain);
       nodes = nodes[idx].children;
     }
     return crumbs;
