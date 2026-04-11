@@ -13,7 +13,7 @@ export default function useRealtimeSync({
   setQueue,
   setPath,
   setSelectedIndex,
-  setToast,
+  showToast,
   lastSyncedTreeRef,
   lastSyncedQueueRef,
   cancelPendingSaves,
@@ -54,8 +54,7 @@ export default function useRealtimeSync({
         }
       }
 
-      setToast('Synced from another device');
-      setTimeout(() => setToast(null), 2000);
+      showToast('Synced from another device');
     }
 
     if (syncQueue !== undefined) {
@@ -65,7 +64,7 @@ export default function useRealtimeSync({
 
     pendingSyncRef.current = null;
     setSyncAvailable(false);
-  }, [versionRef, lastSyncedTreeRef, lastSyncedQueueRef, cancelPendingSaves, setTree, setQueue, setPath, setSelectedIndex, setToast]);
+  }, [versionRef, lastSyncedTreeRef, lastSyncedQueueRef, cancelPendingSaves, setTree, setQueue, setPath, setSelectedIndex, showToast]);
 
   // Route incoming sync: apply immediately or defer if editing/modal open
   const handleIncoming = useCallback((syncTree, syncVersion, syncQueue) => {

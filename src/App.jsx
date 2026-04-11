@@ -9,19 +9,19 @@ import {
   ensureIds,
   findNodeById,
 } from './actions';
-import ChildCount from './components/ChildCount';
-import Linkify from './components/Linkify';
+import NodeContent from './components/NodeContent';
+import NodeMeta from './components/NodeMeta';
+import NodeEditor from './components/NodeEditor';
 import SettingsModal from './components/SettingsModal';
 import BackupModal from './components/BackupModal';
 import { DeleteConfirmModal, ClearCheckedModal } from './components/ConfirmModals';
 import useRealtimeSync from './hooks/useRealtimeSync';
 import HotkeyLegend from './components/HotkeyLegend';
 import QueueBar from './components/QueueBar';
-import DeadlineBadge from './components/DeadlineBadge';
 import MetadataPanel from './components/MetadataPanel';
 import CalendarFeedModal from './components/CalendarFeedModal';
 import EmojiPicker from './components/EmojiPicker';
-import { emojis as emojiList } from './emojiData';
+import useToast from './hooks/useToast';
 import useEjectAnimation from './hooks/useEjectAnimation';
 import useSlideAnimation from './hooks/useSlideAnimation';
 import useSvgLines from './hooks/useSvgLines';
@@ -32,12 +32,9 @@ import WebSettingsPanel from './components/WebSettingsPanel';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
 import { supabase } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
-import { marked } from 'marked';
 import './theme.css';
 import './App.css';
 import './components/deadline.css';
-
-marked.setOptions({ breaks: true });
 
 function getDefaultTree() {
   return [
@@ -98,7 +95,7 @@ export default function App({ session }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
   const [settingsInitial, setSettingsInitial] = useState({ path: '', physics: null });
-  const [toast, setToast] = useState(null);
+  const { toast, show: showToast } = useToast();
   const [queue, setQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [physics, setPhysics] = useState({ vx: 1.2, vy: -1.2, gravity: 0.4, spin: 0.04 });
@@ -230,7 +227,7 @@ export default function App({ session }) {
     setQueue,
     setPath,
     setSelectedIndex,
-    setToast,
+    showToast,
     lastSyncedTreeRef,
     lastSyncedQueueRef,
     cancelPendingSaves,
@@ -365,63 +362,27 @@ export default function App({ session }) {
         if (result.success) {
           versionRef.current = result.version;
           broadcast(tree, result.version, queueRef.current);
-          setToast('Saved');
-          setTimeout(() => setToast(null), 1000);
+          showToast('Saved', 1000);
         } else {
           // Version mismatch — silently apply server state
           ensureIds(result.serverTree);
           lastSyncedTreeRef.current = result.serverTree;
           setTree(result.serverTree);
           versionRef.current = result.version;
-          setToast('Synced from another device');
-          setTimeout(() => setToast(null), 2000);
+          showToast('Synced from another device');
         }
       }).catch(() => {
-        setToast('Save failed');
-        setTimeout(() => setToast(null), 1000);
+        showToast('Save failed', 1000);
       });
     }
-  }, [tree, userId, broadcast]);
+  }, [tree, userId, broadcast, showToast]);
 
-  const setNodeDeadline = useCallback((dateStr) => {
+  const setNodeProperty = useCallback((prop, value) => {
     if (!tree || !selectedNode) return;
     const newTree = cloneTree(tree);
     let nodes = newTree;
     for (const idx of path) nodes = nodes[idx].children;
-    nodes[selectedIndex].deadline = dateStr;
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
-    setRedoStack([]);
-    setTree(newTree);
-  }, [tree, path, selectedIndex, selectedNode]);
-
-  const setNodePriority = useCallback((priority) => {
-    if (!tree || !selectedNode) return;
-    const newTree = cloneTree(tree);
-    let nodes = newTree;
-    for (const idx of path) nodes = nodes[idx].children;
-    nodes[selectedIndex].priority = priority;
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
-    setRedoStack([]);
-    setTree(newTree);
-  }, [tree, path, selectedIndex, selectedNode]);
-
-  const setNodeTime = useCallback((time) => {
-    if (!tree || !selectedNode) return;
-    const newTree = cloneTree(tree);
-    let nodes = newTree;
-    for (const idx of path) nodes = nodes[idx].children;
-    nodes[selectedIndex].deadlineTime = time;
-    setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
-    setRedoStack([]);
-    setTree(newTree);
-  }, [tree, path, selectedIndex, selectedNode]);
-
-  const setNodeDuration = useCallback((duration) => {
-    if (!tree || !selectedNode) return;
-    const newTree = cloneTree(tree);
-    let nodes = newTree;
-    for (const idx of path) nodes = nodes[idx].children;
-    nodes[selectedIndex].deadlineDuration = duration;
+    nodes[selectedIndex][prop] = value;
     setUndoStack(stack => [...stack, { tree: cloneTree(tree), path, selectedIndex }]);
     setRedoStack([]);
     setTree(newTree);
@@ -438,7 +399,7 @@ export default function App({ session }) {
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
     focus, queue, queueIndex, pushUndo, prepareSwap,
-    setToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
+    showToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex,
     setFocus, setSelectedIndex, setPath, setMode, setBackupOpen,
     onSave: userId ? handleSave : undefined,
     calendarOpen, setCalendarOpen,
@@ -500,8 +461,7 @@ export default function App({ session }) {
         loadedRef.current = true;
       }).catch(() => {
         // Do NOT set a default tree — it would get auto-saved and wipe real data
-        setToast('Failed to load notes. Please refresh.');
-        setTimeout(() => setToast(null), 5000);
+        showToast('Failed to load notes. Please refresh.', 5000);
       });
     }
     // Load queue from cloud
@@ -534,12 +494,10 @@ export default function App({ session }) {
           lastSyncedTreeRef.current = result.serverTree;
           setTree(result.serverTree);
           versionRef.current = result.version;
-          setToast('Synced from another device');
-          setTimeout(() => setToast(null), 2000);
+          showToast('Synced from another device');
         }
       }).catch(() => {
-        setToast('Auto-save failed');
-        setTimeout(() => setToast(null), 2000);
+        showToast('Auto-save failed');
       });
     }, 1500);
     return () => {
@@ -640,8 +598,7 @@ export default function App({ session }) {
           <button className="load-btn" onClick={() => {
             if (window.treenote?.saveDefaultFile) {
               window.treenote.saveDefaultFile(serializeTree(tree)).then((ok) => {
-                setToast(ok ? 'Saved' : 'Save failed');
-                setTimeout(() => setToast(null), 1000);
+                showToast(ok ? 'Saved' : 'Save failed', 1000);
               });
             }
           }}>
@@ -772,15 +729,8 @@ export default function App({ session }) {
                         slideNavigate('left', path.slice(0, -1), i);
                       }}
                     >
-                      {node.markdown ? (
-                        <span className="node-text node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(node.text) }} />
-                      ) : (
-                        <span className="node-text"><Linkify text={node.text} /></span>
-                      )}
-                      <div className="node-meta">
-                        {node.checked && <span className="node-check">&#10003;</span>}
-                        <ChildCount children={node.children} />
-                      </div>
+                      <NodeContent text={node.text} markdown={node.markdown} />
+                      <NodeMeta node={node} />
                     </div>
                   ))}
                 </div>
@@ -832,94 +782,20 @@ export default function App({ session }) {
                       }
                     }}
                   >
-                    {!isEditing && (node.deadline || node.priority || node.markdown || node.checked || node.children.length > 0) && (
-                      <div className="node-meta">
-                        <DeadlineBadge deadline={node.deadline} deadlineTime={node.deadlineTime} deadlineDuration={node.deadlineDuration} />
-                        {node.priority && <span className={`priority-badge ${node.priority}`}>{node.priority}</span>}
-                        {node.markdown && <span className="markdown-badge">MD</span>}
-                        {node.checked && <span className="node-check">&#10003;</span>}
-                        {node.children.length > 0 && (
-                          <span className="child-count">{node.children.length}</span>
-                        )}
-                      </div>
-                    )}
-                    {isEditing && <span className="edit-icon">&#9998;</span>}
+                    {!isEditing && <NodeMeta node={node} full />}
                     {isEditing ? (
-                      <textarea
-                        ref={editInputRef}
-                        className="node-text-input"
-                        defaultValue={node.text}
-                        rows={1}
-                        onInput={(e) => {
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                          updateEmojiPicker(e.target);
-                        }}
-                        onKeyDown={(e) => {
-                          if (emojiPicker.visible) {
-                            const filtered = emojiList.filter(em => em.shortcode.includes(emojiPicker.query.toLowerCase())).slice(0, 8);
-                            if (e.key === 'ArrowDown') {
-                              e.preventDefault();
-                              setEmojiPicker(prev => ({ ...prev, selectedIdx: Math.min(prev.selectedIdx + 1, filtered.length - 1) }));
-                              e.stopPropagation();
-                              return;
-                            }
-                            if (e.key === 'ArrowUp') {
-                              e.preventDefault();
-                              setEmojiPicker(prev => ({ ...prev, selectedIdx: Math.max(prev.selectedIdx - 1, 0) }));
-                              e.stopPropagation();
-                              return;
-                            }
-                            if (e.key === 'Enter' || e.key === 'Tab') {
-                              if (filtered.length > 0) {
-                                e.preventDefault();
-                                insertEmoji(e.target, filtered[emojiPicker.selectedIdx]?.emoji || filtered[0].emoji);
-                                e.stopPropagation();
-                                return;
-                              }
-                            }
-                            if (e.key === 'Escape') {
-                              e.preventDefault();
-                              setEmojiPicker(prev => ({ ...prev, visible: false }));
-                              e.stopPropagation();
-                              return;
-                            }
-                          }
-                          if (e.key === 'Enter' && settings.enterNewline) {
-                            if (e.shiftKey) {
-                              e.preventDefault();
-                              commitEdit(e.target.value);
-                              e.stopPropagation();
-                              return;
-                            }
-                            // Enter without shift = newline (default textarea behavior)
-                          } else if (e.key === 'Enter' && !settings.enterNewline) {
-                            if (!e.shiftKey) {
-                              e.preventDefault();
-                              commitEdit(e.target.value);
-                              e.stopPropagation();
-                              return;
-                            }
-                            // Shift+Enter = newline (default textarea behavior)
-                          }
-                          if (e.key === 'Escape') {
-                            e.preventDefault();
-                            commitEdit(e.target.value);
-                          }
-                          e.stopPropagation();
-                        }}
-                        onBlur={(e) => {
-                          if (mode === 'edit') {
-                            setEmojiPicker(prev => prev.visible ? { ...prev, visible: false } : prev);
-                            commitEdit(e.target.value);
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
+                      <NodeEditor
+                        node={node}
+                        editInputRef={editInputRef}
+                        onCommit={commitEdit}
+                        emojiPicker={emojiPicker}
+                        setEmojiPicker={setEmojiPicker}
+                        insertEmoji={insertEmoji}
+                        updateEmojiPicker={updateEmojiPicker}
+                        settings={settings}
                       />
-                    ) : node.markdown ? (
-                      <span className="node-text node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(node.text) }} />
                     ) : (
-                      <span className="node-text"><Linkify text={node.text} /></span>
+                      <NodeContent text={node.text} markdown={node.markdown} />
                     )}
                   </div>
                 );
@@ -956,15 +832,8 @@ export default function App({ session }) {
                         slideNavigate('right', [...path, selectedIndex], i);
                       }}
                     >
-                      {child.markdown ? (
-                        <span className="node-text node-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(child.text) }} />
-                      ) : (
-                        <span className="node-text"><Linkify text={child.text} /></span>
-                      )}
-                      <div className="node-meta">
-                        {child.checked && <span className="node-check">&#10003;</span>}
-                        <ChildCount children={child.children} />
-                      </div>
+                      <NodeContent text={child.text} markdown={child.markdown} />
+                      <NodeMeta node={child} />
                     </div>
                   ))}
                 </div>
@@ -1009,8 +878,7 @@ export default function App({ session }) {
             window.treenote.saveSettings({ defaultFile: filePath, physics: newPhysics }).then((ok) => {
               if (ok) {
                 setSettingsOpen(false);
-                setToast('Settings saved');
-                setTimeout(() => setToast(null), 1000);
+                showToast('Settings saved', 1000);
                 window.treenote.getDefaultFile().then((content) => {
                   if (content) {
                     const parsed = parseTree(content);
@@ -1043,10 +911,7 @@ export default function App({ session }) {
       {calendarOpen && selectedNode && (
         <MetadataPanel
           node={selectedNode}
-          onSetDeadline={(dateStr) => setNodeDeadline(dateStr)}
-          onSetPriority={(priority) => setNodePriority(priority)}
-          onSetTime={(time) => setNodeTime(time)}
-          onSetDuration={(duration) => setNodeDuration(duration)}
+          onSetProperty={setNodeProperty}
           onClose={() => setCalendarOpen(false)}
         />
       )}
@@ -1067,8 +932,7 @@ export default function App({ session }) {
             window.treenote.saveSettings({ defaultFile: filePath, physics: newPhysics }).then((ok) => {
               if (ok) {
                 setWebSettingsOpen(false);
-                setToast('Settings saved');
-                setTimeout(() => setToast(null), 1000);
+                showToast('Settings saved', 1000);
                 window.treenote.getDefaultFile().then((content) => {
                   if (content) {
                     const parsed = parseTree(content);

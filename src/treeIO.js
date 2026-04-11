@@ -12,19 +12,35 @@ export function detectFormat(content) {
 
 function yamlToNodes(arr) {
   if (!Array.isArray(arr)) return [];
-  return arr.map(item => ({
-    text: item.text || '',
-    checked: !!item.checked,
-    children: yamlToNodes(item.children || []),
-  }));
+  return arr.map(item => {
+    const node = {
+      text: item.text || '',
+      checked: !!item.checked,
+      children: yamlToNodes(item.children || []),
+    };
+    if (item.markdown) node.markdown = true;
+    if (item.deadline) node.deadline = item.deadline;
+    if (item.deadlineTime) node.deadlineTime = item.deadlineTime;
+    if (item.deadlineDuration) node.deadlineDuration = item.deadlineDuration;
+    if (item.priority) node.priority = item.priority;
+    return node;
+  });
 }
 
 function nodesToYaml(nodes) {
-  return nodes.map(node => ({
-    text: node.text,
-    checked: node.checked,
-    children: nodesToYaml(node.children),
-  }));
+  return nodes.map(node => {
+    const out = {
+      text: node.text,
+      checked: node.checked,
+    };
+    if (node.markdown) out.markdown = true;
+    if (node.deadline) out.deadline = node.deadline;
+    if (node.deadlineTime) out.deadlineTime = node.deadlineTime;
+    if (node.deadlineDuration) out.deadlineDuration = node.deadlineDuration;
+    if (node.priority) out.priority = node.priority;
+    out.children = nodesToYaml(node.children);
+    return out;
+  });
 }
 
 export function parseTree(content) {

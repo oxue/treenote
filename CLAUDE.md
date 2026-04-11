@@ -31,6 +31,7 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 - `docs/autofix.md` — autofix pipeline: daemon, fix-issue script, label lifecycle, video proof, retry logic.
 - `docs/mobile-app.md` — mobile app: module structure, state ownership, Capacitor/iOS integration, widget sync, modification rules.
 - `docs/mobile-design.md` — mobile app design spec: screen architecture, gestures, interaction patterns, implementation plan.
+- `docs/image-mode.md` — image mode: node data model, keybinding, Supabase Storage upload, drag-and-drop, rendering spec.
 - `docs/exploration.md` — exploration mode: diverge-then-converge workflow for research chats, phase signals, rules of engagement.
 
 ### Maintenance rules

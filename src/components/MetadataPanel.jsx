@@ -47,7 +47,11 @@ function getFirstDayOfWeek(year, month) {
 
 const FIELDS = ['deadline', 'time', 'duration', 'priority'];
 
-export default function MetadataPanel({ node, onSetDeadline, onSetPriority, onSetTime, onSetDuration, onClose }) {
+export default function MetadataPanel({ node, onSetProperty, onClose }) {
+  const onSetDeadline = (v) => onSetProperty('deadline', v);
+  const onSetPriority = (v) => onSetProperty('priority', v);
+  const onSetTime = (v) => onSetProperty('deadlineTime', v);
+  const onSetDuration = (v) => onSetProperty('deadlineDuration', v);
   const today = new Date();
   const initial = node?.deadline ? new Date(node.deadline) : today;
 
