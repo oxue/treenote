@@ -28,7 +28,7 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 
 ### Area docs
 - `docs/keybindings.md` — keyboard handling: design philosophy, module structure, key reference, rules for modifying.
-- `docs/autofix.md` — autofix pipeline: daemon, fix-issue script, label lifecycle, video proof, retry logic.
+- `docs/autofix.md` — autofix integration: how treenote uses the standalone autofix daemon (`~/src/autofix-daemon`).
 - `docs/mobile-app.md` — mobile app: module structure, state ownership, Capacitor/iOS integration, widget sync, modification rules.
 - `docs/mobile-design.md` — mobile app design spec: screen architecture, gestures, interaction patterns, implementation plan.
 - `docs/image-mode.md` — image mode: node data model, keybinding, Supabase Storage upload, drag-and-drop, rendering spec.
@@ -58,8 +58,11 @@ This keeps CLAUDE.md small (it's always in context) while giving Claude enough b
 
 ## Autofix Pipeline
 
-- `scripts/fix-issue.sh <N>` — fix a GitHub issue in a worktree
-- `scripts/autofix-daemon.sh` — polls for `autofix`-labeled issues
-- `scripts/autofix-launchd.sh start|stop|status|logs` — run daemon as persistent macOS service
-- Labels: `autofix`, `in-progress`, `pr-pending`, `needs-human`
-- Video proof: Playwright records tests, ffmpeg converts to gif, uploaded as GitHub release assets
+The autofix daemon is a **standalone repo** at `~/src/autofix-daemon` (github.com/oxue/autofix-daemon).
+It is NOT part of this repo. Treenote is registered as a project in the daemon's `projects/treenote.conf`.
+
+- Labels: `autofix` (on issues), `revise` (on PRs), `in-progress`, `pr-pending`, `needs-human`
+- Treenote's prompt template: `.autofix-prompt.md` (in this repo root)
+- Daemon config: `~/src/autofix-daemon/projects/treenote.conf`
+- Daemon management: `~/src/autofix-daemon/launchd.sh start|stop|status|logs`
+- Log file: `~/.autofix.log`
