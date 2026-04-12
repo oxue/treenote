@@ -1,7 +1,12 @@
+function parseLocalDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export default function DeadlineBadge({ deadline, deadlineTime, deadlineDuration }) {
   if (!deadline) return null;
 
-  const date = new Date(deadline);
+  const date = parseLocalDate(deadline);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const deadlineDate = new Date(date);
