@@ -45,6 +45,15 @@ function getFirstDayOfWeek(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
+function formatLocalDate(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function parseLocalDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 const FIELDS = ['deadline', 'time', 'duration', 'priority'];
 
 export default function MetadataPanel({ node, onSetProperty, onClose }) {
@@ -53,7 +62,7 @@ export default function MetadataPanel({ node, onSetProperty, onClose }) {
   const onSetTime = (v) => onSetProperty('deadlineTime', v);
   const onSetDuration = (v) => onSetProperty('deadlineDuration', v);
   const today = new Date();
-  const initial = node?.deadline ? new Date(node.deadline) : today;
+  const initial = node?.deadline ? parseLocalDate(node.deadline) : today;
 
   const [activeField, setActiveField] = useState('deadline');
   const [viewYear, setViewYear] = useState(initial.getFullYear());
@@ -142,7 +151,7 @@ export default function MetadataPanel({ node, onSetProperty, onClose }) {
             });
             break;
           case 'Enter':
-            onSetDeadline(new Date(viewYear, viewMonth, cursorDay).toISOString().slice(0, 10));
+            onSetDeadline(formatLocalDate(viewYear, viewMonth, cursorDay));
             break;
           case 'Backspace':
           case 'Delete':
@@ -219,7 +228,7 @@ export default function MetadataPanel({ node, onSetProperty, onClose }) {
 
   const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
   const deadlineStr = node?.deadline ? (() => {
-    const d = new Date(node.deadline);
+    const d = parseLocalDate(node.deadline);
     return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   })() : null;
 
@@ -235,7 +244,7 @@ export default function MetadataPanel({ node, onSetProperty, onClose }) {
     if (isDeadline) cls += ' deadline';
 
     cells.push(
-      <div key={d} className={cls} onClick={() => onSetDeadline(new Date(viewYear, viewMonth, d).toISOString().slice(0, 10))}>
+      <div key={d} className={cls} onClick={() => onSetDeadline(formatLocalDate(viewYear, viewMonth, d))}>
         {d}
       </div>
     );
