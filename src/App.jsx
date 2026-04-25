@@ -233,7 +233,7 @@ export default function App({ session }) {
     cancelPendingSaves,
   });
 
-  const { parentColRef, currentColRef, childColRef, leftSvgRef, rightSvgRef, leftLines, rightLines } = useSvgLines({
+  const { parentColRef, currentColRef, childColRef, leftSvgRef, rightSvgRef, leftLines, rightLines, updateLines } = useSvgLines({
     selectedIndex, path, tree,
     childNodesLength: childNodes.length,
     currentNodesLength: currentNodes.length,
@@ -393,7 +393,7 @@ export default function App({ session }) {
     setRedoStack([]);
   }, [tree, path, selectedIndex, queue]);
 
-  const { prepareSwap } = useSwapAnimation(currentColRef);
+  const { prepareSwap } = useSwapAnimation(currentColRef, updateLines);
 
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,

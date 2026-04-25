@@ -1,7 +1,9 @@
 import { useRef, useCallback, useLayoutEffect } from 'react';
 
-export default function useSwapAnimation(nodeListRef) {
+export default function useSwapAnimation(nodeListRef, onAnimate) {
   const swapInfoRef = useRef(null);
+  const onAnimateRef = useRef(onAnimate);
+  onAnimateRef.current = onAnimate;
 
   const prepareSwap = useCallback((fromIndex, toIndex) => {
     const container = nodeListRef.current;
@@ -45,6 +47,9 @@ export default function useSwapAnimation(nodeListRef) {
     boxA.style.transform = `translateY(${deltaA}px)`;
     boxB.style.transform = `translateY(${deltaB}px)`;
 
+    // Redraw lines so they start from the visual (pre-animation) box positions
+    if (onAnimateRef.current) onAnimateRef.current();
+
     // Force reflow so the browser registers the starting position
     void boxA.offsetHeight;
 
@@ -56,10 +61,21 @@ export default function useSwapAnimation(nodeListRef) {
       boxA.style.transform = '';
       boxB.style.transform = '';
 
+      // Keep lines anchored to boxes for the duration of the animation
+      const animStart = performance.now();
+      const tickLines = () => {
+        if (onAnimateRef.current) onAnimateRef.current();
+        if (performance.now() - animStart < 250) {
+          requestAnimationFrame(tickLines);
+        }
+      };
+      requestAnimationFrame(tickLines);
+
       const cleanup = (el) => {
         const onEnd = () => {
           el.style.transition = '';
           el.style.transform = '';
+          if (onAnimateRef.current) onAnimateRef.current();
         };
         el.addEventListener('transitionend', onEnd, { once: true });
         setTimeout(onEnd, 300);
