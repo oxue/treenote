@@ -51,5 +51,5 @@ export default function useSvgLines({ selectedIndex, path, tree, childNodesLengt
     updateLines();
   }, [selectedIndex, path, tree, childNodesLength, currentNodesLength, parentNodesLength, updateLines]);
 
-  return { parentColRef, currentColRef, childColRef, leftSvgRef, rightSvgRef, leftLines, rightLines };
+  return { parentColRef, currentColRef, childColRef, leftSvgRef, rightSvgRef, leftLines, rightLines, updateLines };
 }
