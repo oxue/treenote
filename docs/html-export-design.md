@@ -4,7 +4,7 @@
 
 ## Overview
 
-Let the user pick any node in their tree and export the subtree rooted at it as a **single self-contained `.html` file** — one file, no server, no Supabase, no build step. Open the file in any browser and it behaves like a read-only, navigable mini-treenote: same look, same arrow-key navigation, same expand/collapse, same markdown/image rendering. Drop it in a Slack DM, attach it to an email, host it on a static page — it just works.
+Let the user pick any node in their tree and export the subtree rooted at it as a **single self-contained `.html` file** — one file, no server, no Supabase, no build step. Open the file in any browser and it behaves like a read-only, navigable mini-treenote: same look, same arrow-key navigation, same expand/collapse, same markdown rendering. Drop it in a Slack DM, attach it to an email, host it on a static page — it just works.
 
 The export is a **read-only snapshot**. No editing, no save, no auth, no network calls. If the original tree changes later, you re-export.
 
@@ -37,7 +37,7 @@ When someone opens the exported `.html` file:
 - Same dark/light theme the exporter was using (theme is baked in).
 - Same three-column layout (parent / current / children) on desktop, same single-column stack on mobile.
 - Arrow keys / `hjkl` navigate exactly as in the live app.
-- Markdown nodes render as markdown. Image nodes render the embedded image.
+- Markdown nodes render as markdown.
 - Deadlines, priorities, checked state — all visible.
 - A small banner at the top: "Read-only snapshot · Exported from Treenote · 2026-05-01 · [treenote.app]". The banner is dismissable.
 - **No** edit affordances. Pressing edit keys (Enter, `i`, etc.) does nothing or shows a tiny "read-only" toast.
@@ -120,19 +120,6 @@ Key properties:
 - The placeholder `<!--TREENOTE_DATA-->` is a stable string we reserve in the viewer's `index.html`.
 - `</` inside JSON is escaped to prevent HTML injection if a node's text contains `</script>`.
 
-### Image handling
-
-Image nodes in treenote store a Supabase Storage URL (see `docs/image-mode.md`). For an export to be self-contained, every image must be **inlined as a data URL**.
-
-At export time:
-1. Walk the subtree, collect all `imageUrl` values.
-2. Fetch each image, convert to base64, replace `imageUrl` with the data URL in the export payload.
-3. Show progress in the toast: "Exporting (3/12 images)…"
-
-Caveats:
-- Large image-heavy trees produce huge HTML files. We'll add a soft warning when the projected file size exceeds 10 MB.
-- If an image fails to fetch (CORS, deleted), we replace it with a placeholder data URL and continue.
-
 ### What gets stripped
 
 The viewer bundle excludes:
@@ -178,7 +165,6 @@ Phased so we ship something useful early.
 - New Vite config, viewer entry, single-file plugin.
 - Viewer renders the static tree (no navigation yet — just a flat indented outline).
 - Export keybinding + toast.
-- No image inlining (image nodes show a "image not exported" placeholder).
 - Ship it. This already covers the "share it with others" use case for text-only trees.
 
 ### Phase 2: parity navigation
@@ -187,7 +173,6 @@ Phased so we ship something useful early.
 - Read-only legend.
 
 ### Phase 3: rich content
-- Image inlining with progress toast.
 - Markdown nodes render exactly as in the live app.
 - File-size warning for large exports.
 
@@ -215,3 +200,16 @@ Phased so we ship something useful early.
 - PDF / image export. HTML only.
 - Server-side generation. Stays client-only — no new backend surface.
 - Authentication / encryption of exports. The file is whatever the exporter shares; standard web sharing rules apply.
+
+---
+
+## Future: image nodes
+
+Image mode is itself only a design doc today (see `docs/image-mode.md`) — there are no image nodes in the tree yet. So this spec deliberately says nothing about how to export them. **If/when image mode actually lands**, this design will need a follow-up section covering:
+
+- Walking the subtree to collect `imageUrl` values and fetching each one (Supabase Storage URLs are public so a plain `fetch` works).
+- Inlining each image as a base64 data URL in the export payload, so the file stays self-contained.
+- Progress UI for image-heavy trees and a soft file-size warning.
+- Fallback when an image can't be fetched (CORS, deleted from storage).
+
+None of that is in scope here — it's listed only so a future contributor implementing image mode knows to revisit this doc.
