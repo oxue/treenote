@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import './WebSettingsPanel.css';
+import { BOX_WIDTH_MIN, BOX_WIDTH_MAX } from '../hooks/useSettings';
 
 const TABS = [
   { id: 'keybindings', label: 'Keybindings' },
-  { id: 'theme', label: 'Theme' },
+  { id: 'appearance', label: 'Appearance' },
 ];
 
 // Only show Electron tab when running in Electron
@@ -213,7 +214,16 @@ export default function WebSettingsPanel({
     </div>
   );
 
-  const renderTheme = () => (
+  const handleBoxWidthChange = useCallback((rawValue) => {
+    const parsed = parseInt(rawValue, 10);
+    if (Number.isNaN(parsed)) return;
+    const clamped = Math.max(BOX_WIDTH_MIN, Math.min(BOX_WIDTH_MAX, parsed));
+    onUpdateSettings({ boxWidth: clamped });
+  }, [onUpdateSettings]);
+
+  const currentBoxWidth = settings.boxWidth ?? 400;
+
+  const renderAppearance = () => (
     <div className="web-settings-section">
       <div className="web-settings-row">
         <span className="web-settings-label">Choose a theme</span>
@@ -243,6 +253,40 @@ export default function WebSettingsPanel({
             )}
           </div>
         ))}
+      </div>
+
+      <div className="appearance-section">
+        <span className="web-settings-label">Tree box width</span>
+        <div className="box-width-control">
+          <input
+            type="range"
+            className="box-width-slider"
+            min={BOX_WIDTH_MIN}
+            max={BOX_WIDTH_MAX}
+            step="10"
+            value={currentBoxWidth}
+            onChange={(e) => handleBoxWidthChange(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            aria-label="Tree box width"
+          />
+          <div className="box-width-input-wrap">
+            <input
+              type="number"
+              className="box-width-input"
+              min={BOX_WIDTH_MIN}
+              max={BOX_WIDTH_MAX}
+              step="10"
+              value={currentBoxWidth}
+              onChange={(e) => handleBoxWidthChange(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              aria-label="Tree box width in pixels"
+            />
+            <span className="box-width-unit">px</span>
+          </div>
+        </div>
+        <span className="web-settings-hint">
+          Adjusts width of parent, current, and child columns. Queue items are unaffected.
+        </span>
       </div>
     </div>
   );
@@ -319,7 +363,7 @@ export default function WebSettingsPanel({
         </div>
         <div className="web-settings-body">
           {activeTab === 'keybindings' && renderKeybindings()}
-          {activeTab === 'theme' && renderTheme()}
+          {activeTab === 'appearance' && renderAppearance()}
           {activeTab === 'electron' && renderElectron()}
         </div>
       </div>

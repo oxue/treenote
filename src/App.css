@@ -200,14 +200,14 @@ body {
 }
 
 .column-spacer {
-  width: 460px;
-  min-width: 460px;
+  width: calc(var(--main-box-width, 400px) + 60px);
+  min-width: calc(var(--main-box-width, 400px) + 60px);
 }
 
 /* ===== Node List ===== */
 .node-list {
-  width: 400px;
-  min-width: 400px;
+  width: var(--main-box-width, 400px);
+  min-width: var(--main-box-width, 400px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -426,8 +426,8 @@ body {
 
 /* ===== Child List ===== */
 .child-list {
-  width: 400px;
-  min-width: 400px;
+  width: var(--main-box-width, 400px);
+  min-width: var(--main-box-width, 400px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -485,8 +485,8 @@ body {
 
 /* ===== Parent List ===== */
 .parent-list {
-  width: 400px;
-  min-width: 400px;
+  width: var(--main-box-width, 400px);
+  min-width: var(--main-box-width, 400px);
   display: flex;
   flex-direction: column;
   gap: 6px;

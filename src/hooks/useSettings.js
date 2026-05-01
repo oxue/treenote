@@ -7,7 +7,11 @@ const DEFAULT_SETTINGS = {
   theme: 'dark',
   enterNewline: true,
   defaultMarkdown: false,
+  boxWidth: 400,
 };
+
+export const BOX_WIDTH_MIN = 240;
+export const BOX_WIDTH_MAX = 720;
 
 function loadSettings() {
   try {
@@ -34,9 +38,15 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
+function applyBoxWidth(boxWidth) {
+  const w = Math.max(BOX_WIDTH_MIN, Math.min(BOX_WIDTH_MAX, Number(boxWidth) || 400));
+  document.documentElement.style.setProperty('--main-box-width', w + 'px');
+}
+
 // Apply saved theme immediately on module load
 const initialSettings = loadSettings();
 applyTheme(initialSettings.theme);
+applyBoxWidth(initialSettings.boxWidth);
 
 export default function useSettings() {
   const [settings, setSettingsState] = useState(initialSettings);
@@ -45,6 +55,7 @@ export default function useSettings() {
   useEffect(() => {
     persistSettings(settings);
     applyTheme(settings.theme);
+    applyBoxWidth(settings.boxWidth);
   }, [settings]);
 
   const updateSettings = useCallback((patch) => {
