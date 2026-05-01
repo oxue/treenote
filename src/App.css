@@ -186,9 +186,9 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
-  /* 660 = 460px (spacer or parent+svg) + 200px (half of selected node-list).
-     Centers the selected column on wide screens; floors at 0 on narrow ones. */
-  padding-left: max(0px, calc(50% - 660px));
+  /* Centers the selected column: spacer/parent column (boxWidth + 60px line) +
+     half the selected node-list (boxWidth / 2). Floors at 0 on narrow screens. */
+  padding-left: max(0px, calc(50% - var(--main-box-width, 400px) * 1.5 - 60px));
 }
 
 .columns {
