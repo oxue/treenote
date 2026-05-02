@@ -1,6 +1,8 @@
 # Self-Contained HTML Export — Design Spec
 
-> **Status**: design only, not implemented. Issue #61.
+> **Status**: implemented (Phase 1+2). Issue #61.
+>
+> Source files: `vite.viewer.config.js`, `src/viewer/`, `src/exportHtml.js`. Trigger: `Cmd/Ctrl+Shift+E`, or the Export tab in `WebSettingsPanel.jsx`. Build: `npm run build:viewer` produces `public/viewer-template.html`; the main `npm run build` chains it automatically. At runtime `exportHtml.js` fetches that template and substitutes the tree payload at the `<!--TREENOTE_DATA-->` placeholder.
 
 ## Overview
 

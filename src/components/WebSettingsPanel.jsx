@@ -5,6 +5,7 @@ import { BOX_WIDTH_MIN, BOX_WIDTH_MAX } from '../hooks/useSettings';
 const TABS = [
   { id: 'keybindings', label: 'Keybindings' },
   { id: 'appearance', label: 'Appearance' },
+  { id: 'export', label: 'Export' },
 ];
 
 // Only show Electron tab when running in Electron
@@ -64,6 +65,8 @@ export default function WebSettingsPanel({
   onClose,
   settings,
   onUpdateSettings,
+  onExport,
+  selectedNodeText,
   // Electron-specific props
   electronSettings,
   onSaveElectronSettings,
@@ -291,6 +294,45 @@ export default function WebSettingsPanel({
     </div>
   );
 
+  const renderExport = () => {
+    const hasNode = !!(selectedNodeText && selectedNodeText.length > 0);
+    const preview = hasNode
+      ? `Selected: ${selectedNodeText.split('\n')[0].slice(0, 60)}`
+      : 'No node selected. Close this panel and pick one first.';
+    return (
+      <div className="web-settings-section">
+        <div className="web-settings-row">
+          <span className="web-settings-label">Self-contained HTML export</span>
+        </div>
+        <p className="scheme-desc">
+          Download the currently selected node and its subtree as a single
+          self-contained <code>.html</code> file. Open it in any browser — no
+          server, no account, no Treenote install needed. Read-only.
+        </p>
+        <p className="scheme-desc" style={{ opacity: 0.75 }}>{preview}</p>
+        <div className="web-settings-actions" style={{ justifyContent: 'flex-start' }}>
+          <button
+            className="load-btn web-settings-save-btn"
+            disabled={!hasNode || !onExport}
+            onClick={() => {
+              if (onExport) {
+                onExport();
+                onClose();
+              }
+            }}
+          >
+            Export current node as HTML
+          </button>
+        </div>
+        <div className="scheme-note">
+          Tip: press <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> (or
+          <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> on Windows/Linux)
+          anywhere in the app to export the selected node directly.
+        </div>
+      </div>
+    );
+  };
+
   const renderElectron = () => (
     <div className="web-settings-section">
       <div className="web-settings-row">
@@ -364,6 +406,7 @@ export default function WebSettingsPanel({
         <div className="web-settings-body">
           {activeTab === 'keybindings' && renderKeybindings()}
           {activeTab === 'appearance' && renderAppearance()}
+          {activeTab === 'export' && renderExport()}
           {activeTab === 'electron' && renderElectron()}
         </div>
       </div>

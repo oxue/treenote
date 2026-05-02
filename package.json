@@ -4,7 +4,8 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:viewer": "vite build --config vite.viewer.config.js",
+    "build": "npm run build:viewer && vite build",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "electron:build": "vite build && electron-builder",
     "screenshot": "node scripts/take-screenshots.mjs",
