@@ -30,6 +30,7 @@ import useSwapAnimation from './hooks/useSwapAnimation';
 import useSettings from './hooks/useSettings';
 import WebSettingsPanel from './components/WebSettingsPanel';
 import { loadUserTree, saveUserTree, loadUserQueue, saveUserQueue, saveBackup, deleteOldBackups } from './storage';
+import { exportNodeAsHtml } from './exportHtml';
 import { supabase } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import './theme.css';
@@ -395,6 +396,19 @@ export default function App({ session }) {
 
   const { prepareSwap } = useSwapAnimation(currentColRef, updateLines);
 
+  const handleExport = useCallback(async (node) => {
+    const target = node || selectedNode;
+    if (!target) return;
+    showToast('Exporting…', 1500);
+    try {
+      await exportNodeAsHtml(target, settings.theme, settings.boxWidth, window.location.origin);
+      showToast('Exported ✓', 1500);
+    } catch (err) {
+      console.error('[export]', err);
+      showToast('Export failed', 2000);
+    }
+  }, [selectedNode, settings.theme, settings.boxWidth, showToast]);
+
   useKeyboard({
     tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen,
     getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, animatingRef, ejectQueueItem,
@@ -408,6 +422,7 @@ export default function App({ session }) {
     keybindingScheme: settings.keybindingScheme,
     webSettingsOpen, setWebSettingsOpen,
     defaultMarkdown: settings.defaultMarkdown,
+    onExport: handleExport,
   });
 
   // Scroll selected item into view
@@ -926,6 +941,8 @@ export default function App({ session }) {
           onClose={() => setWebSettingsOpen(false)}
           settings={settings}
           onUpdateSettings={updateSettings}
+          onExport={() => handleExport(selectedNode)}
+          selectedNodeText={selectedNode?.text || ''}
           electronSettings={window.treenote ? settingsInitial : null}
           onSaveElectronSettings={window.treenote ? ({ path: filePath, physics: newPhysics }) => {
             setPhysics(newPhysics);

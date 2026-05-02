@@ -22,11 +22,19 @@ export default function handleGraphKeys(e, {
   setFocus, setSelectedIndex, setMode, setBackupOpen,
   setCalendarOpen, setCalendarFeedOpen, setLegendVisible,
   setSettingsOpen, setWebSettingsOpen,
-  queue, undo, redo,
+  queue, undo, redo, onExport,
 }) {
   if (animatingRef.current && (isRight(e, scheme) || isLeft(e, scheme))) return;
 
   const isMeta = e.metaKey || e.ctrlKey;
+
+  // Cmd/Ctrl + Shift + E: export current node as self-contained HTML.
+  // Checked before regular letter handling so the modifier combo wins.
+  if (isMeta && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+    e.preventDefault();
+    if (onExport && selectedNode) onExport(selectedNode);
+    return true;
+  }
 
   // Directional navigation
   if (isUp(e, scheme)) {

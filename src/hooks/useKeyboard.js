@@ -21,6 +21,7 @@ export default function useKeyboard({
   keybindingScheme,
   webSettingsOpen, setWebSettingsOpen,
   defaultMarkdown,
+  onExport,
 }) {
   const scheme = keybindingScheme || 'arrows';
   const insertOpts = defaultMarkdown ? { markdown: true } : {};
@@ -106,11 +107,11 @@ export default function useKeyboard({
         setFocus, setSelectedIndex, setMode, setBackupOpen,
         setCalendarOpen, setCalendarFeedOpen, setLegendVisible,
         setSettingsOpen, setWebSettingsOpen,
-        queue, undo, redo,
+        queue, undo, redo, onExport,
       });
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, showToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, scheme, webSettingsOpen, setWebSettingsOpen, insertOpts, prepareSwap]);
+  }, [tree, path, selectedIndex, selectedNode, mode, deleteConfirm, clearCheckedConfirm, settingsOpen, backupOpen, getCurrentNodes, slideNavigate, enterEditMode, undo, redo, applyAction, focus, queue, queueIndex, pushUndo, animatingRef, ejectQueueItem, showToast, setSettingsOpen, setDeleteConfirm, setClearCheckedConfirm, setQueue, setQueueIndex, setFocus, setSelectedIndex, setPath, setMode, onSave, setBackupOpen, calendarOpen, setCalendarOpen, calendarFeedOpen, setCalendarFeedOpen, setLegendVisible, scheme, webSettingsOpen, setWebSettingsOpen, insertOpts, prepareSwap, onExport]);
 }
